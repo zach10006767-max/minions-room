@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArcaneVoxel: Advanced RPG Sandbox Engine</title>
+    <title>ArcaneVoxel: Advanced Survival & Crafting Engine</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-main: #020408;
-            --bg-panel: rgba(8, 12, 24, 0.9);
-            --border-arcane: rgba(147, 51, 234, 0.4);
-            --glow-purple: rgba(147, 51, 234, 0.25);
+            --bg-main: #03050a;
+            --bg-panel: rgba(10, 16, 32, 0.9);
+            --border-arcane: rgba(139, 92, 246, 0.35);
+            --glow-purple: rgba(139, 92, 246, 0.2);
             --accent-mana: #06b6d4;
             --accent-xp: #10b981;
-            --accent-pyre: #ef4444;
             --accent-void: #8b5cf6;
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
@@ -30,14 +29,9 @@
 
         #viewportContainer { flex: 1; position: relative; height: 100%; display: flex; flex-direction: column; }
         #canvas3d { width: 100%; flex: 1; display: block; }
+        #cinematicHUD { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 100px rgba(0,0,0,0.9); z-index: 80; }
 
-        /* Cinematic HUD Frame Overlay */
-        #cinematicHUD {
-            position: absolute; inset: 0; pointer-events: none;
-            box-shadow: inset 0 0 100px rgba(0,0,0,0.9); z-index: 80;
-        }
-
-        /* Top Performance & Vector Telemetry Bar */
+        /* Telemetry Bar */
         #topTelemetryBar {
             position: absolute; top: 20px; left: 20px; right: 20px;
             background: var(--bg-panel); border: 1px solid var(--border-arcane);
@@ -52,16 +46,22 @@
         .metric-lbl { font-size: 8px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1.5px; }
         .metric-val { font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: var(--accent-mana); }
 
-        /* Action-Tracking Interface Components */
-        #crosshair {
-            position: absolute; top: 50%; left: 50%; width: 20px; height: 20px;
-            transform: translate(-50%, -50%); pointer-events: none; z-index: 200;
+        /* Crosshair Mining Progress Rings */
+        #crosshairContainer {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 200; display: flex; flex-direction: column; align-items: center; gap: 8px;
         }
-        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(255,255,255,0.5); }
-        #crosshair::before { top: 9px; left: 0; width: 20px; height: 2px; }
-        #crosshair::after { top: 0; left: 9px; width: 2px; height: 20px; }
+        #crosshair { width: 16px; height: 16px; position: relative; }
+        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(255,255,255,0.6); }
+        #crosshair::before { top: 7px; left: 0; width: 16px; height: 2px; }
+        #crosshair::after { top: 0; left: 7px; width: 2px; height: 16px; }
+        #miningProgressRing {
+            width: 40px; height: 4px; background: rgba(255,255,255,0.1);
+            border-radius: 2px; overflow: hidden; display: none; border: 1px solid rgba(0,0,0,0.5);
+        }
+        #miningProgressBar { height: 100%; width: 0%; background: var(--accent-void); transition: width 0.1s linear; }
 
-        /* Vitals Framework Panels */
+        /* Vitals Panel */
         #vitalsPanel {
             position: absolute; bottom: 120px; left: 20px; width: 280px;
             background: var(--bg-panel); border: 1px solid var(--border-arcane);
@@ -69,91 +69,88 @@
             backdrop-filter: blur(20px); z-index: 100; box-shadow: 0 12px 36px rgba(0,0,0,0.7);
         }
         .stat-row { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; font-family: var(--font-mono); }
-        .bar-bg { height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.02); }
-        .bar-fill { height: 100%; width: 100%; transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .bar-bg { height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; width: 100%; transition: width 0.2s ease; }
 
-        /* Advanced RPG Hotbar Matrix */
+        /* Hotbar */
         .hotbar {
             position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
             background: var(--bg-panel); border: 1px solid var(--border-arcane);
             padding: 8px; border-radius: 20px; display: flex; gap: 8px; z-index: 100;
-            box-shadow: 0 24px 64px rgba(0,0,0,0.9), 0 0 30px var(--glow-purple); backdrop-filter: blur(24px);
+            box-shadow: 0 24px 64px rgba(0,0,0,0.9); backdrop-filter: blur(24px);
         }
         .hotbar-slot {
-            width: 68px; height: 68px; border-radius: 14px; background: rgba(255,255,255,0.01);
+            width: 64px; height: 64px; border-radius: 14px; background: rgba(255,255,255,0.01);
             border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column;
-            justify-content: center; align-items: center; font-size: 24px; cursor: pointer;
+            justify-content: center; align-items: center; font-size: 22px; cursor: pointer;
             position: relative; transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         .hotbar-slot.active {
             border-color: var(--accent-void); background: rgba(139, 92, 246, 0.15);
-            box-shadow: 0 0 20px var(--accent-void), inset 0 0 10px var(--accent-void);
-            transform: scale(1.08) translateY(-4px);
+            box-shadow: 0 0 20px var(--accent-void); transform: scale(1.08) translateY(-4px);
         }
         .slot-key { position: absolute; top: 4px; left: 6px; font-size: 9px; font-family: var(--font-mono); color: var(--text-secondary); }
-        .slot-lbl { position: absolute; bottom: 4px; font-size: 8px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px; }
-        .hotbar-slot.active .slot-lbl { color: #f3e8ff; }
+        .slot-lbl { position: absolute; bottom: 4px; font-size: 8px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); }
 
-        /* Interactive Upgrade Node Matrix (Skill Tree UI Overlay) */
-        #skillTreeOverlay {
-            position: absolute; inset: 0; background: rgba(3, 5, 10, 0.85);
+        /* Unified RPG Hub Panel Container (Inventory / Crafting / Skills) */
+        #rpgHubOverlay {
+            position: absolute; inset: 0; background: rgba(2, 4, 8, 0.85);
             display: none; justify-content: center; align-items: center; z-index: 300;
-            backdrop-filter: blur(16px); padding: 40px; animation: fadeIn 0.25s ease;
+            backdrop-filter: blur(20px); padding: 40px; animation: fadeIn 0.2s ease;
         }
-        .tree-container {
-            background: #060810; border: 1px solid var(--border-arcane);
-            width: 100%; max-width: 840px; border-radius: 24px; padding: 32px;
-            box-shadow: 0 32px 80px rgba(0,0,0,0.9), 0 0 40px rgba(147, 51, 234, 0.15);
-            display: flex; flex-direction: column; gap: 24px;
+        .hub-window {
+            background: #070b12; border: 1px solid var(--border-arcane);
+            width: 100%; max-width: 960px; height: 80vh; border-radius: 24px; display: flex;
+            box-shadow: 0 32px 80px rgba(0,0,0,0.9), 0 0 40px rgba(139,92,246,0.15); overflow: hidden;
         }
-        .tree-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 16px; }
-        .tree-header h2 { font-family: var(--font-display); font-size: 24px; letter-spacing: 1px; color: #f3e8ff; }
+        .hub-sidebar {
+            width: 220px; background: rgba(0,0,0,0.2); border-right: 1px solid rgba(255,255,255,0.05);
+            padding: 24px; display: flex; flex-direction: column; gap: 12px;
+        }
+        .sidebar-btn {
+            background: transparent; border: 1px solid transparent; color: var(--text-secondary);
+            padding: 12px 16px; border-radius: 10px; text-align: left; font-weight: 600; font-size: 13px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .sidebar-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.02); }
+        .sidebar-btn.active { color: white; background: rgba(139, 92, 246, 0.15); border-color: var(--border-arcane); }
         
-        .node-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .skill-node {
-            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 16px; padding: 20px; cursor: pointer; transition: all 0.2s ease;
-            display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden;
-        }
-        .skill-node:hover:not(.maxed) { border-color: var(--accent-void); background: rgba(139, 92, 246, 0.04); transform: translateY(-2px); }
-        .skill-node.unlocked { border-color: var(--accent-mana); background: rgba(6, 182, 212, 0.05); }
-        .skill-node.maxed { border-color: var(--accent-xp); background: rgba(16, 185, 129, 0.08); cursor: default; }
-        .node-name { font-weight: 700; font-size: 14px; color: #f1f5f9; }
-        .node-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
-        .node-rank { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--accent-void); text-transform: uppercase; margin-top: auto; }
-        .skill-node.maxed .node-rank { color: var(--accent-xp); }
+        .hub-content { flex: 1; padding: 32px; overflow-y: auto; display: none; }
+        .hub-content.active { display: block; }
+        .hub-header-title { font-family: var(--font-display); font-size: 22px; margin-bottom: 20px; color: #f3e8ff; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px; }
 
-        .close-btn {
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-            color: var(--text-primary); padding: 10px 20px; border-radius: 10px; font-weight: 600;
-            font-size: 12px; cursor: pointer; transition: all 0.15s;
+        /* Dynamic Inventory Asset Grid */
+        .inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; }
+        .inventory-card {
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative;
         }
-        .close-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+        .inv-icon { font-size: 24px; }
+        .inv-count { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--accent-mana); }
+        .inv-name { font-size: 10px; color: var(--text-secondary); text-align: center; text-transform: uppercase; font-weight: 600; }
 
-        /* Systems Logging Pipeline */
-        #logContainer {
-            position: absolute; bottom: 24px; left: 20px; width: 340px;
-            display: flex; flex-direction: column; gap: 6px; pointer-events: none; z-index: 100;
+        /* Crafting Grid UI Configuration */
+        .crafting-list { display: flex; flex-direction: column; gap: 14px; }
+        .craft-item {
+            background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 14px; padding: 16px; display: flex; justify-content: space-between; align-items: center;
         }
-        .log-msg {
-            font-family: var(--font-mono); font-size: 11px; background: rgba(4, 6, 12, 0.85);
-            border-left: 3px solid var(--accent-void); padding: 10px 14px; border-radius: 0 8px 8px 0;
-            backdrop-filter: blur(8px); color: #e2e8f0; animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        .craft-info h4 { font-size: 14px; color: white; margin-bottom: 4px; }
+        .craft-info p { font-size: 11px; color: var(--text-secondary); }
+        .craft-btn {
+            background: var(--accent-void); color: white; border: none; padding: 10px 20px;
+            border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer; text-transform: uppercase; transition: all 0.2s;
         }
+        .craft-btn:hover { background: #7c3aed; transform: translateY(-1px); }
 
-        #instructionsOverlay {
-            position: absolute; inset: 0; background: linear-gradient(135deg, #020306, #090614);
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 400; text-align: center; padding: 40px; transition: opacity 0.3s ease;
-        }
-        #instructionsOverlay h1 { font-family: var(--font-display); font-size: 40px; font-weight: 900; letter-spacing: 3px; color: #f3e8ff; margin-bottom: 12px; }
+        /* Log Pipes */
+        #logContainer { position: absolute; bottom: 24px; left: 20px; width: 340px; display: flex; flex-direction: column; gap: 6px; pointer-events: none; z-index: 100; }
+        .log-msg { font-family: var(--font-mono); font-size: 11px; background: rgba(4, 6, 12, 0.9); border-left: 3px solid var(--accent-void); padding: 10px 14px; border-radius: 0 8px 8px 0; color: #e2e8f0; animation: slideIn 0.2s ease forwards; }
+
+        #instructionsOverlay { position: absolute; inset: 0; background: linear-gradient(135deg, #020306, #06050c); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 400; text-align: center; padding: 40px; }
+        #instructionsOverlay h1 { font-family: var(--font-display); font-size: 38px; font-weight: 900; color: #f3e8ff; margin-bottom: 12px; }
         #instructionsOverlay p { max-width: 580px; color: var(--text-secondary); font-size: 13px; line-height: 1.6; margin-bottom: 32px; }
-        .btn-prime {
-            background: linear-gradient(135deg, #6d28d9, #5b21b6); color: white; border: none;
-            padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 12px; text-transform: uppercase;
-            letter-spacing: 1px; cursor: pointer; box-shadow: 0 8px 24px rgba(109, 40, 217, 0.35); transition: all 0.2s;
-        }
-        .btn-prime:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(109, 40, 217, 0.5); }
+        .btn-prime { background: linear-gradient(135deg, #6d28d9, #5b21b6); color: white; border: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 12px; text-transform: uppercase; cursor: pointer; box-shadow: 0 8px 24px rgba(109, 40, 217, 0.35); }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideIn { from { transform: translateX(-15px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -167,13 +164,17 @@
         <div id="topTelemetryBar">
             <div class="engine-title">ArcaneVoxel Sandbox Core</div>
             <div class="metric-group">
-                <div class="metric-card"><span class="metric-lbl">Raster Engine</span><span class="metric-val" id="ui-fps">60 FPS</span></div>
+                <div class="metric-card"><span class="metric-lbl">Kinetic Engine</span><span class="metric-val" id="ui-fps">60 FPS</span></div>
                 <div class="metric-card"><span class="metric-lbl">Coordinates</span><span class="metric-val" id="ui-pos">X: 8, Y: 24, Z: 8</span></div>
-                <div class="metric-card"><span class="metric-lbl">Active Pools</span><span class="metric-val" id="ui-chunks">Chunks: 0</span></div>
+                <div class="metric-card"><span class="metric-lbl">Active Fields</span><span class="metric-val" id="ui-chunks">Chunks: 0</span></div>
             </div>
         </div>
 
-        <div id="crosshair"></div>
+        <div id="crosshairContainer">
+            <div id="crosshair"></div>
+            <div id="miningProgressRing"><div id="miningProgressBar"></div></div>
+        </div>
+        
         <div id="logContainer"></div>
 
         <div id="vitalsPanel">
@@ -185,52 +186,40 @@
                 <div class="stat-row" style="color:var(--accent-mana)"><span>MANA RESONANCE</span><span id="lbl-mana-text">100 / 100</span></div>
                 <div class="bar-bg" style="margin-top:4px;"><div id="bar-mana" class="bar-fill" style="background:var(--accent-mana); width:100%;"></div></div>
             </div>
-            <div class="stat-row" style="color:#e9d5ff; border-top:1px solid rgba(255,255,255,0.06); padding-top:8px; margin-top:2px;">
-                <span>NEXUS SKILL POINTS:</span><span id="lbl-points" style="font-size:12px; font-weight:700; color:var(--accent-void)">0</span>
-            </div>
-            <button class="close-btn" style="width:100%; padding:6px; font-size:10px; margin-top:4px;" onclick="engine.toggleSkillTree(true)">Open Skill Tree [E]</button>
+            <button class="btn-prime" style="padding:8px; font-size:10px; border-radius:8px; margin-top:4px;" onclick="engine.toggleHubOverlay(true)">Open Hub Matrix [E]</button>
         </div>
 
         <div class="hotbar" id="hotbar">
-            <div class="hotbar-slot active" onclick="engine.setActiveSlot(0)"><span class="slot-key">1</span>⛏️<span class="slot-lbl">Pickaxe</span></div>
+            <div class="hotbar-slot active" onclick="engine.setActiveSlot(0)"><span class="slot-key">1</span>⛏️<span class="slot-lbl">Harvest</span></div>
             <div class="hotbar-slot" onclick="engine.setActiveSlot(1)"><span class="slot-key">2</span>🔥<span class="slot-lbl">Pyre Staff</span></div>
-            <div class="hotbar-slot" onclick="engine.setActiveSlot(2)"><span class="slot-key">3</span>⚡<span class="slot-lbl">Volt Beam</span></div>
-            <div class="hotbar-slot" onclick="engine.setActiveSlot(3)"><span class="slot-key">4</span>🧱<span class="slot-lbl">Aetherium</span></div>
+            <div class="hotbar-slot" onclick="engine.setActiveSlot(2)"><span class="slot-key">3</span>🧱<span class="slot-lbl">Planks</span></div>
+            <div class="hotbar-slot" onclick="engine.setActiveSlot(3)"><span class="slot-key">4</span>🔮<span class="slot-lbl">Aetherium</span></div>
         </div>
 
-        <div id="skillTreeOverlay">
-            <div class="tree-container">
-                <div class="tree-header">
-                    <div>
-                        <h2>Nexus Skill Matrix Alignment</h2>
-                        <p style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Optimize your alignment tokens to rewrite world physics variables.</p>
-                    </div>
-                    <button class="close-btn" onclick="engine.toggleSkillTree(false)">Return to World [Escape]</button>
+        <div id="rpgHubOverlay">
+            <div class="hub-window">
+                <div class="hub-sidebar">
+                    <button class="sidebar-btn active" id="tab-btn-inv" onclick="engine.switchHubTab('inv')">💼 Material Vault</button>
+                    <button class="sidebar-btn" id="tab-btn-craft" onclick="engine.switchHubTab('craft')">⚒️ Alchemy Loom</button>
+                    <button class="sidebar-btn" style="margin-top:auto; background:rgba(219,68,85,0.1); color:#fda4af;" onclick="engine.toggleHubOverlay(false)">Close Menu [Esc]</button>
                 </div>
-                <div class="node-grid">
-                    <div class="skill-node" id="node-miner" onclick="engine.purchaseSkillNode('miner')">
-                        <div class="node-name">Miner's Resonance</div>
-                        <div class="node-desc">Accelerates molecular structural disintegration waves, boosting block harvest speed.</div>
-                        <div class="node-rank" id="rank-miner">Rank: 0 / 3</div>
-                    </div>
-                    <div class="skill-node" id="node-mage" onclick="engine.purchaseSkillNode('mage')">
-                        <div class="node-name">Arcane Intensifier</div>
-                        <div class="node-desc">Amplifies magical blast radii and scales base kinetic energy velocity equations.</div>
-                        <div class="node-rank" id="rank-mage">Rank: 0 / 3</div>
-                    </div>
-                    <div class="skill-node" id="node-channeler" onclick="engine.purchaseSkillNode('channeler')">
-                        <div class="node-name">Chrono Channeler</div>
-                        <div class="node-desc">Optimizes player conversion fields, augmenting absolute mana restoration rates.</div>
-                        <div class="node-rank" id="rank-channeler">Rank: 0 / 3</div>
-                    </div>
+                
+                <div class="hub-content active" id="tab-content-inv">
+                    <div class="hub-header-title">Material Storage Vault</div>
+                    <div class="inventory-grid" id="ui-inventory-grid"></div>
+                </div>
+
+                <div class="hub-content" id="tab-content-craft">
+                    <div class="hub-header-title">Structural Alchemy Recipes</div>
+                    <div class="crafting-list" id="ui-crafting-list"></div>
                 </div>
             </div>
         </div>
 
         <div id="instructionsOverlay" onclick="engine.requestPointerLock()">
-            <h1>ARCANE VOXEL: RPG sandbox CORE</h1>
-            <p>Deploying a production-grade WebGL voxel pipeline with procedural fractional Brownian terrain mapping, rigid sub-pixel AABB collision vectors, dynamic spell structures, and an interface configuration system.</p>
-            <button class="btn-prime">Synchronize Engine Vectors</button>
+            <h1>ARCANE VOXEL: SURVIVAL EXPANSION</h1>
+            <p>Deploying smooth operational WASD acceleration, procedural forest biome clusters, variable block strength matrices, magnetic physical item entities, and synchronized alchemy crafting structures.</p>
+            <button class="btn-prime">Initialize Consciousness Grid</button>
         </div>
         <div id="canvas3d"></div>
     </div>
@@ -258,92 +247,143 @@
         };
 
         // =========================================================================
-        // ENGINE CONSTANTS & TYPE DEFINITIONS
+        // ENGINE TYPE CONFIGURATION DEFINITIONS
         // =========================================================================
-        const BLOCK_TYPES = { AIR: 0, AETHERIUM: 1, NETHERRACK: 2, OBSIDIAN: 3, COAL: 4, EMERALD: 5 };
-        const BLOCK_COLORS = { 1: 0x581c87, 2: 0x991b1b, 3: 0x0f172a, 4: 0x334155, 5: 0x065f46 };
+        const BLOCK_TYPES = { AIR: 0, GRASS: 1, DIRT: 2, WOOD: 3, LEAVES: 4, AETHERIUM: 5, PLANKS: 6 };
+        const BLOCK_COLORS = { 1: 0x15803d, 2: 0x78350f, 3: 0x451a03, 4: 0x16a34a, 5: 0x6b21a8, 6: 0xb45309 };
+        const BLOCK_NAMES = { 1: "Grass", 2: "Dirt", 3: "Wood Log", 4: "Leaves", 5: "Aetherium Crystals", 6: "Wooden Planks" };
+        const BLOCK_ICONS = { 1: "🌱", 2: "🟫", 3: "🪵", 4: "🌿", 5: "🔮", 6: "🧱" };
+        const BLOCK_HARDNESS = { 1: 0.5, 2: 0.6, 3: 2.2, 4: 0.3, 5: 3.5, 6: 1.2 }; // Mining speed ratios in seconds
+
         const CHUNK_SIZE = 16; const CHUNK_HEIGHT = 32; const RENDER_DISTANCE = 3;
 
-        class ArcaneRPGSandboxEngine {
+        class SurvivalSandboxEngine {
             constructor() {
                 this.chunks = {}; this.activeMeshes = {}; this.interactableObjectsList = [];
-                this.projectiles = []; this.particles = []; this.activeSlotIndex = 0;
-                this.isSkillTreeOpen = false;
+                this.projectiles = []; this.particles = []; this.droppedItemsList = [];
+                this.activeSlotIndex = 0; this.isHubOpen = false;
 
-                // Character Progression Matrix Models
-                this.playerProgression = {
-                    level: 1, xp: 0, xpNeeded: 100, skillPoints: 0,
-                    mana: 100, maxMana: 100,
-                    skills: { miner: 0, mage: 0, channeler: 0 },
-                    modifiers: { harvestMultiplier: 1.0, spellDamage: 10, manaRegenRate: 0.15 }
-                };
+                // Inventory Model Maps
+                this.inventory = { "WOOD": 4, "LEAVES": 0, "GRASS": 0, "DIRT": 0, "AETHERIUM": 2, "PLANKS": 0 };
+                
+                this.craftingRecipes = [
+                    { id: 'planks', name: 'Wooden Planks', icon: '🧱', cost: { WOOD: 1 }, result: { PLANKS: 4 }, desc: 'Process raw logs into clean building segments.' },
+                    { id: 'staff', name: 'Aether Pyre Staff', icon: '🔥', cost: { PLANKS: 4, AETHERIUM: 2 }, result: { WOOD: 0 }, unlockedWeapon: true, desc: 'Forge a conduit element capable of firing structural displacement magic.' }
+                ];
 
+                this.hasUnlockedStaff = false;
+
+                // Progressive Breaking Variables
+                this.miningState = { targetCoords: null, progress: 0, totalTimeNeeded: 0 };
+
+                this.playerProgression = { level: 1, xp: 0, xpNeeded: 100, mana: 100, maxMana: 100 };
                 this.cameraFX = { shake: 0, bob: 0, fovTarget: 75 };
+
+                // Smooth Kinetic Movement Values
                 this.player = {
-                    position: new THREE.Vector3(8, 24, 8), velocity: new THREE.Vector3(), rotation: new THREE.Vector2(),
-                    moveForward: false, moveBackward: false, moveLeft: false, moveRight: false, canJump: false, width: 0.6, height: 1.8
+                    position: new THREE.Vector3(8, 20, 8), 
+                    velocity: new THREE.Vector3(),
+                    acceleration: 0.012, maxWalkSpeed: 0.16, dragCoefficient: 0.82,
+                    rotation: new THREE.Vector2(),
+                    inputFlags: { forward: false, backward: false, left: false, right: false },
+                    canJump: false, width: 0.6, height: 1.8
                 };
 
-                this.initRenderPipeline();
-                this.synchronizeChunkGrid();
-                this.bindInputInterfaces();
-                this.pushSystemLog("🔮 RPG Systems Initialized. Welcome back, Architect.");
+                this.initGraphicsCore();
+                this.synchronizeWorldMeshGrid();
+                this.bindHardwareControllerIO();
+                this.buildInterfaceGrids();
+                this.pushSystemLog("🌲 Forest Node Ecosystem initialized. Running predictive velocity matrices.");
             }
 
-            initRenderPipeline() {
+            initGraphicsCore() {
                 const box = document.getElementById('canvas3d');
                 this.scene = new THREE.Scene();
-                this.scene.background = new THREE.Color(0x020306);
-                this.scene.fog = new THREE.FogExp2(0x020306, 0.018);
+                this.scene.background = new THREE.Color(0x04060a);
+                this.scene.fog = new THREE.FogExp2(0x04060a, 0.02);
 
                 this.camera = new THREE.PerspectiveCamera(75, box.clientWidth / box.clientHeight, 0.1, 1000);
                 this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
                 this.renderer.setSize(box.clientWidth, box.clientHeight);
                 box.appendChild(this.renderer.domElement);
 
-                this.scene.add(new THREE.AmbientLight(0x1e1b4b, 0.5));
-                const sun = new THREE.DirectionalLight(0xa78bfa, 0.5);
-                sun.position.set(30, 50, 10); this.scene.add(sun);
+                this.scene.add(new THREE.AmbientLight(0x1e1b4b, 0.6));
+                const moon = new THREE.DirectionalLight(0xa78bfa, 0.4);
+                moon.position.set(25, 45, 15); this.scene.add(moon);
 
-                this.raycaster = new THREE.Raycaster(); this.raycaster.far = 7;
+                this.raycaster = new THREE.Raycaster(); this.raycaster.far = 6;
+                
+                // Block destruction crack wireframe effect reference
+                const crackGeo = new THREE.BoxGeometry(1.01, 1.01, 1.01);
+                const crackMat = new THREE.MeshBasicMaterial({ color: 0xef4444, wireframe: true, transparent: true, opacity: 0 });
+                this.breakOverlayMesh = new THREE.Mesh(crackGeo, crackMat);
+                this.scene.add(this.breakOverlayMesh);
             }
 
-            synchronizeChunkGrid() {
+            synchronizeWorldMeshGrid() {
                 const cx = Math.floor(this.player.position.x / CHUNK_SIZE);
                 const cz = Math.floor(this.player.position.z / CHUNK_SIZE);
 
                 for (let x = -RENDER_DISTANCE; x <= RENDER_DISTANCE; x++) {
                     for (let z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
                         const tkx = cx + x; const tkz = cz + z; const key = `${tkx},${tkz}`;
-                        if (!this.chunks[key]) this.compileProceduralChunk(tkx, tkz);
+                        if (!this.chunks[key]) this.compileProceduralForestChunk(tkx, tkz);
                     }
                 }
                 for (let key in this.chunks) {
-                    if (!this.activeMeshes[key]) this.instantiateInstancedMeshGroup(key);
+                    if (!this.activeMeshes[key]) this.renderInstancedChunkLayer(key);
                 }
-                document.getElementById('ui-chunks').textContent = `Chunks: ${Object.keys(this.chunks).length}`;
+                document.getElementById('ui-chunks').textContent = `Fields: ${Object.keys(this.chunks).length}`;
             }
 
-            compileProceduralChunk(cx, cz) {
+            compileProceduralForestChunk(cx, cz) {
                 const key = `${cx},${cz}`; const data = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
 
+                // Flat terrain iteration loop pass
                 for (let x = 0; x < CHUNK_SIZE; x++) {
                     for (let z = 0; z < CHUNK_SIZE; z++) {
                         const gx = cx * CHUNK_SIZE + x; const gz = cz * CHUNK_SIZE + z;
-                        let n = PerlinNoiseEngine.noise2D(gx * 0.04, gz * 0.04) * 8;
-                        n += PerlinNoiseEngine.noise2D(gx * 0.1, gz * 0.1) * 2;
-                        const surface = Math.floor(14 + n);
+                        let n = PerlinNoiseEngine.noise2D(gx * 0.03, gz * 0.03) * 6;
+                        const surface = Math.floor(12 + n);
 
                         for (let y = 0; y < CHUNK_HEIGHT; y++) {
                             const idx = x + (y * CHUNK_SIZE) + (z * CHUNK_SIZE * CHUNK_HEIGHT);
-                            if (y === surface) {
-                                data[idx] = (Math.random() < 0.08) ? BLOCK_TYPES.AETHERIUM : BLOCK_TYPES.NETHERRACK;
-                            } else if (y < surface && y > surface - 4) {
-                                data[idx] = BLOCK_TYPES.OBSIDIAN;
-                            } else if (y <= surface - 4) {
-                                data[idx] = (Math.random() < 0.03) ? BLOCK_TYPES.EMERALD : BLOCK_TYPES.COAL;
-                            } else {
-                                data[idx] = BLOCK_TYPES.AIR;
+                            if (y === surface) data[idx] = BLOCK_TYPES.GRASS;
+                            else if (y < surface && y > surface - 4) data[idx] = BLOCK_TYPES.DIRT;
+                            else if (y <= surface - 4) data[idx] = (Math.random() < 0.015) ? BLOCK_TYPES.AETHERIUM : BLOCK_TYPES.DIRT;
+                            else data[idx] = BLOCK_TYPES.AIR;
+                        }
+                    }
+                }
+
+                // Forest tree object generation pass inside grid parameters
+                for (let x = 2; x < CHUNK_SIZE - 2; x += 4) {
+                    for (let z = 2; z < CHUNK_SIZE - 2; z += 4) {
+                        if (Math.random() < 0.65) { 
+                            const gx = cx * CHUNK_SIZE + x; const gz = cz * CHUNK_SIZE + z;
+                            let n = PerlinNoiseEngine.noise2D(gx * 0.03, gz * 0.03) * 6;
+                            const surface = Math.floor(12 + n);
+
+                            // Build Tree Trunks
+                            const treeHeight = 4 + Math.floor(Math.random() * 3);
+                            for (let h = 1; h <= treeHeight; h++) {
+                                const ty = surface + h;
+                                if (ty < CHUNK_HEIGHT) data[x + (ty * CHUNK_SIZE) + (z * CHUNK_SIZE * CHUNK_HEIGHT)] = BLOCK_TYPES.WOOD;
+                            }
+
+                            // Build Foliage Leaf Crowns
+                            const crownY = surface + treeHeight;
+                            for (let lx = -2; lx <= 2; lx++) {
+                                for (let lz = -2; lz <= 2; lz++) {
+                                    for (let ly = -1; ly <= 1; ly++) {
+                                        if (Math.abs(lx) + Math.abs(lz) + Math.abs(ly) > 3) continue; // Soft canopy edge rounding
+                                        const fx = x + lx; const fy = crownY + ly; const fz = z + lz;
+                                        if (fx >= 0 && fx < CHUNK_SIZE && fz >= 0 && fz < CHUNK_SIZE && fy < CHUNK_HEIGHT) {
+                                            const lIdx = fx + (fy * CHUNK_SIZE) + (fz * CHUNK_SIZE * CHUNK_HEIGHT);
+                                            if (data[lIdx] === BLOCK_TYPES.AIR) data[lIdx] = BLOCK_TYPES.LEAVES;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -351,26 +391,26 @@
                 this.chunks[key] = data;
             }
 
-            instantiateInstancedMeshGroup(key) {
+            renderInstancedChunkLayer(key) {
                 const parts = key.split(','); const cx = parseInt(parts[0]); const cz = parseInt(parts[1]);
-                const data = this.chunks[key]; const frequencyMap = {}; const geo = new THREE.BoxGeometry(1, 1, 1);
+                const data = this.chunks[key]; const freq = {}; const geo = new THREE.BoxGeometry(1, 1, 1);
 
                 for (let i = 0; i < data.length; i++) {
-                    if (data[i] !== BLOCK_TYPES.AIR) frequencyMap[data[i]] = (frequencyMap[data[i]] || 0) + 1;
+                    if (data[i] !== BLOCK_TYPES.AIR) freq[data[i]] = (freq[data[i]] || 0) + 1;
                 }
 
                 const group = new THREE.Group();
 
-                for (let type in frequencyMap) {
-                    const mat = new THREE.MeshStandardMaterial({ color: BLOCK_COLORS[type], roughness: 0.6, metalness: 0.1, flatShading: true });
-                    const instMesh = new THREE.InstancedMesh(geo, mat, frequencyMap[type]);
+                for (let type in freq) {
+                    const mat = new THREE.MeshStandardMaterial({ color: BLOCK_COLORS[type], roughness: 0.7, metalness: 0.1, flatShading: true });
+                    const instMesh = new THREE.InstancedMesh(geo, mat, freq[type]);
                     let offset = 0; const dummy = new THREE.Object3D();
 
                     for (let x = 0; x < CHUNK_SIZE; x++) {
                         for (let z = 0; z < CHUNK_SIZE; z++) {
                             for (let y = 0; y < CHUNK_HEIGHT; y++) {
-                                const didx = x + (y * CHUNK_SIZE) + (z * CHUNK_SIZE * CHUNK_HEIGHT);
-                                if (data[didx] === parseInt(type)) {
+                                const idx = x + (y * CHUNK_SIZE) + (z * CHUNK_SIZE * CHUNK_HEIGHT);
+                                if (data[idx] === parseInt(type)) {
                                     dummy.position.set(cx * CHUNK_SIZE + x, y, cz * CHUNK_SIZE + z);
                                     dummy.updateMatrix();
                                     instMesh.setMatrixAt(offset++, dummy.matrix);
@@ -402,118 +442,192 @@
                 this.chunks[key][lx + (y * CHUNK_SIZE) + (lz * CHUNK_SIZE * CHUNK_HEIGHT)] = type;
 
                 if (this.activeMeshes[key]) { this.scene.remove(this.activeMeshes[key]); delete this.activeMeshes[key]; }
-                this.instantiateInstancedMeshGroup(key);
+                this.renderInstancedChunkLayer(key);
             }
 
-            executePrimaryAction() {
-                // Primary action conditional evaluation mapping
-                if (this.activeSlotIndex === 0) {
-                    // Tool Harvest Matrix Mode
-                    this.raycaster.setFromCamera(new THREE.Vector2(0,0), this.camera);
-                    const hits = this.raycaster.intersectObjects(this.interactableObjectsList);
-                    if (hits.length > 0) {
-                        const pt = hits[0].point.clone().sub(hits[0].face.normal.clone().multiplyScalar(0.5));
-                        const tx = Math.round(pt.x); const ty = Math.round(pt.y); const tz = Math.round(pt.z);
-                        const block = this.getBlockAt(tx, ty, tz);
+            processHarvestingTick() {
+                // Return if slot configuration isn't tools or construction modules
+                if (this.activeSlotIndex !== 0) { this.resetMiningState(); return; }
 
-                        if (block !== BLOCK_TYPES.AIR) {
-                            this.setBlockAt(tx, ty, tz, BLOCK_TYPES.AIR);
-                            this.spawnParticles(tx, ty, tz, BLOCK_COLORS[block], 12);
-                            this.cameraFX.shake = 0.15;
-                            
-                            // Scale progression reward integers with modifier traits
-                            const earnedXP = Math.floor(15 * this.playerProgression.modifiers.harvestMultiplier);
-                            this.awardExperiencePoints(earnedXP);
+                this.raycaster.setFromCamera(new THREE.Vector2(0,0), this.camera);
+                const hits = this.raycaster.intersectObjects(this.interactableObjectsList);
+
+                if (hits.length > 0) {
+                    const pt = hits[0].point.clone().sub(hits[0].face.normal.clone().multiplyScalar(0.4));
+                    const tx = Math.round(pt.x); const ty = Math.round(pt.y); const tz = Math.round(pt.z);
+                    const block = this.getBlockAt(tx, ty, tz);
+
+                    if (block !== BLOCK_TYPES.AIR) {
+                        this.breakOverlayMesh.position.set(tx, ty, tz);
+                        this.breakOverlayMesh.material.opacity = 0.35 + (this.miningState.progress / 100) * 0.65;
+                        
+                        if (!this.miningState.targetCoords || this.miningState.targetCoords.x !== tx || this.miningState.targetCoords.y !== ty || this.miningState.targetCoords.z !== tz) {
+                            this.miningState.targetCoords = { x: tx, y: ty, z: tz };
+                            this.miningState.progress = 0;
+                            this.miningState.totalTimeNeeded = BLOCK_HARDNESS[block] * 60; // Standard 60Hz loop calculation ticks
+                            document.getElementById('miningProgressRing').style.display = 'block';
                         }
-                    }
-                } else if (this.activeSlotIndex === 1 || this.activeSlotIndex === 2) {
-                    // Arcane Spell Cast Discharges
-                    const cost = this.activeSlotIndex === 1 ? 20 : 15;
-                    if (this.playerProgression.mana >= cost) {
-                        this.playerProgression.mana -= cost;
-                        this.castSpellProjectile(this.activeSlotIndex);
-                    } else {
-                        this.pushSystemLog("❌ Insufficient Mana Reserves to fire Spell Component.");
+
+                        this.miningState.progress += (100 / this.miningState.totalTimeNeeded);
+                        document.getElementById('miningProgressBar').style.width = `${this.miningState.progress}%`;
+
+                        // Micro impact particle simulations
+                        if (Math.random() < 0.22) this.spawnImpactVFXParticles(tx, ty, tz, BLOCK_COLORS[block], 2);
+
+                        if (this.miningState.progress >= 100) {
+                            this.setBlockAt(tx, ty, tz, BLOCK_TYPES.AIR);
+                            this.spawnFloatingResourceItemEntity(tx, ty, tz, block);
+                            this.spawnImpactVFXParticles(tx, ty, tz, BLOCK_COLORS[block], 14);
+                            this.resetMiningState();
+                            this.awardExperiencePoints(12);
+                        }
+                        return;
                     }
                 }
+                this.resetMiningState();
+            }
+
+            resetMiningState() {
+                this.miningState.targetCoords = null; this.miningState.progress = 0;
+                document.getElementById('miningProgressRing').style.display = 'none';
+                this.breakOverlayMesh.material.opacity = 0;
             }
 
             executeSecondaryAction() {
-                // Build Matrix Placement Interfaces
+                // Build execution code
+                const currentSlotType = [0, 0, BLOCK_TYPES.PLANKS, BLOCK_TYPES.AETHERIUM][this.activeSlotIndex];
+                if (currentSlotType === 0) return;
+
+                const tokenKey = currentSlotType === BLOCK_TYPES.PLANKS ? "PLANKS" : "AETHERIUM";
+                if (this.inventory[tokenKey] <= 0) {
+                    this.pushSystemLog(`❌ Lacking inventory segments of [${tokenKey}] to build structural elements.`);
+                    return;
+                }
+
                 this.raycaster.setFromCamera(new THREE.Vector2(0,0), this.camera);
                 const hits = this.raycaster.intersectObjects(this.interactableObjectsList);
                 if (hits.length > 0) {
                     const norm = hits[0].face.normal;
-                    const pt = hits[0].point.clone().sub(norm.clone().multiplyScalar(0.5));
+                    const pt = hits[0].point.clone().sub(norm.clone().multiplyScalar(0.4));
                     const bx = Math.round(pt.x) + norm.x; const by = Math.round(pt.y) + norm.y; const bz = Math.round(pt.z) + norm.z;
 
-                    this.setBlockAt(bx, by, bz, BLOCK_TYPES.AETHERIUM);
-                    this.spawnParticles(bx, by, bz, BLOCK_COLORS[BLOCK_TYPES.AETHERIUM], 8);
+                    this.setBlockAt(bx, by, bz, currentSlotType);
+                    this.inventory[tokenKey]--;
+                    this.spawnImpactVFXParticles(bx, by, bz, BLOCK_COLORS[currentSlotType], 8);
+                    this.buildInterfaceGrids();
                 }
             }
 
-            castSpellProjectile(type) {
-                this.cameraFX.fovTarget = 86; this.cameraFX.shake = 0.2;
-                const color = type === 1 ? 0xef4444 : 0x06b6d4;
+            executeMagicProjectileCast() {
+                if (this.activeSlotIndex !== 1) return;
+                if (!this.hasUnlockedStaff) {
+                    this.pushSystemLog("❌ Fire staff matrix unaligned. Synthesize blueprint inside Alchemy Loom first.");
+                    return;
+                }
+
+                if (this.playerProgression.mana >= 25) {
+                    this.playerProgression.mana -= 25;
+                    this.cameraFX.fovTarget = 86; this.cameraFX.shake = 0.25;
+
+                    const geo = new THREE.SphereGeometry(0.16, 8, 8);
+                    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+                    mesh.position.copy(this.player.position).sub(new THREE.Vector3(0, 0.25, 0));
+
+                    const dir = new THREE.Vector3(0,0,-1).applyQuaternion(this.camera.quaternion);
+                    mesh.position.add(dir.clone().multiplyScalar(0.5));
+                    mesh.add(new THREE.PointLight(0xef4444, 2.5, 8)); this.scene.add(mesh);
+
+                    this.projectiles.push({ mesh, velocity: dir.multiplyScalar(0.56), life: 60 });
+                    this.pushSystemLog("✨ Discharged Pyre Strike missile element.");
+                }
+            }
+
+            spawnFloatingResourceItemEntity(x, y, z, type) {
+                // Create miniature voxel item drop drops
+                const geo = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+                const mat = new THREE.MeshStandardMaterial({ color: BLOCK_COLORS[type], roughness: 0.4, metalness: 0.2 });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(x, y + 0.3, z);
                 
-                const geo = new THREE.SphereGeometry(0.18, 8, 8);
-                const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color }));
-                mesh.position.copy(this.player.position).sub(new THREE.Vector3(0, 0.25, 0));
+                mesh.add(new THREE.PointLight(BLOCK_COLORS[type], 0.8, 2));
+                this.scene.add(mesh);
 
-                const dir = new THREE.Vector3(0,0,-1).applyQuaternion(this.camera.quaternion);
-                mesh.position.add(dir.clone().multiplyScalar(0.4));
-                mesh.add(new THREE.PointLight(color, 2, 8)); this.scene.add(mesh);
-
-                this.projectiles.push({
-                    mesh, velocity: dir.multiplyScalar(0.52), life: 70, type
+                this.droppedItemsList.push({
+                    mesh, blockType: type, baseHomeY: y + 0.3, phaseOffset: Math.random() * Math.PI, collectAcceleration: 0
                 });
-                this.pushSystemLog(`✨ Fired Spell Matrix Module [${type === 1 ? 'Pyre Strike' : 'Volt Beam'}]`);
             }
 
-            awardExperiencePoints(amt) {
-                const prog = this.playerProgression; prog.xp += amt;
-                this.pushSystemLog(`⚡ Earned +${amt} Alignment Experience Points.`);
-                
-                if (prog.xp >= prog.xpNeeded) {
-                    prog.xp -= prog.xpNeeded; prog.level++;
-                    prog.skillPoints += 1;
-                    prog.xpNeeded = Math.floor(prog.xpNeeded * 1.4);
-                    this.pushSystemLog(`🌌 LEVEL UP! Unlocked Nexus Node Tier Level ${prog.level}.`);
-                    this.cameraFX.shake = 0.4;
-                }
-                this.updateUserInterfaceElements();
-            }
+            processDroppedItemsMagneticTick() {
+                const playerPos = this.player.position.clone().sub(new THREE.Vector3(0, 0.8, 0));
+                const collectionRadius = 5.0; const absolutePickupRadius = 0.8;
 
-            purchaseSkillNode(skillKey) {
-                const prog = this.playerProgression;
-                if (prog.skillPoints > 0 && prog.skills[skillKey] < 3) {
-                    prog.skillPoints--; prog.skills[skillKey]++;
+                for (let i = this.droppedItemsList.length - 1; i >= 0; i--) {
+                    const item = this.droppedItemsList[i];
+                    item.mesh.rotation.y += 0.03; item.mesh.rotation.x += 0.01;
                     
-                    // Mutate absolute system physics logic based on upgrade choices
-                    if (skillKey === 'miner') prog.modifiers.harvestMultiplier += 0.4;
-                    if (skillKey === 'mage') prog.modifiers.spellDamage += 6;
-                    if (skillKey === 'channeler') prog.modifiers.manaRegenRate += 0.12;
+                    // Ambient hover calculations
+                    if (item.collectAcceleration === 0) {
+                        item.mesh.position.y = item.baseHomeY + Math.sin(Date.now() * 0.003 + item.phaseOffset) * 0.12;
+                    }
 
-                    this.pushSystemLog(`✅ Upgraded ${skillKey} node structure to Rank ${prog.skills[skillKey]}.`);
-                    this.updateUserInterfaceElements();
-                    this.refreshSkillTreeUI();
+                    const dist = item.mesh.position.distanceTo(playerPos);
+
+                    if (dist < collectionRadius) {
+                        // Activate magnetic interpolation tracking loop pipelines
+                        item.collectAcceleration += 0.015;
+                        const direction = playerPos.clone().sub(item.mesh.position).normalize();
+                        item.mesh.position.add(direction.multiplyScalar(item.collectAcceleration));
+
+                        if (dist < absolutePickupRadius) {
+                            const stringKey = BLOCK_NAMES[item.blockType].toUpperCase().split(' ')[0];
+                            this.inventory[stringKey] = (this.inventory[stringKey] || 0) + 1;
+                            
+                            this.pushSystemLog(`📥 Collected material stack: [+1 ${BLOCK_NAMES[item.blockType]}].`);
+                            this.scene.remove(item.mesh); this.droppedItemsList.splice(i, 1);
+                            this.buildInterfaceGrids();
+                        }
+                    } else {
+                        item.collectAcceleration = 0;
+                    }
                 }
             }
 
-            spawnParticles(x, y, z, color, count) {
-                const geo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+            attemptRecipeSynthesis(recipe) {
+                for (let mat in recipe.cost) {
+                    if ((this.inventory[mat] || 0) < recipe.cost[mat]) {
+                        this.pushSystemLog("❌ Processing error. Deficient ingredient configurations inside Vault.");
+                        return;
+                    }
+                }
+
+                // Deduct cost matrices values
+                for (let mat in recipe.cost) this.inventory[mat] -= recipe.cost[mat];
+
+                if (recipe.unlockedWeapon) {
+                    this.hasUnlockedStaff = true;
+                    document.getElementById('ui-crafting-list').children[1].querySelector('button').disabled = true;
+                    this.pushSystemLog("🔥 ALCHEMY SUCCESS: Transmuted Aether Pyre Staff. Slot 2 online.");
+                } else {
+                    for (let out in recipe.result) this.inventory[out] = (this.inventory[out] || 0) + recipe.result[out];
+                    this.pushSystemLog(`⚒️ ALCHEMY SUCCESS: Fabricated ${recipe.name} packet cluster.`);
+                }
+                this.buildInterfaceGrids();
+            }
+
+            spawnImpactVFXParticles(x, y, z, color, count) {
+                const geo = new THREE.BoxGeometry(0.06, 0.06, 0.06);
                 const mat = new THREE.MeshBasicMaterial({ color });
                 for (let i = 0; i < count; i++) {
                     const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.set(x + (Math.random()-0.5), y + 0.5, z + (Math.random()-0.5));
+                    mesh.position.set(x + (Math.random()-0.5)*0.6, y + 0.3, z + (Math.random()-0.5)*0.6);
                     this.scene.add(mesh);
                     this.particles.push({
-                        mesh, velocity: new THREE.Vector3((Math.random()-0.5)*0.12, (Math.random()*0.15)+0.04, (Math.random()-0.5)*0.12), life: 25 + Math.random()*20
+                        mesh, velocity: new THREE.Vector3((Math.random()-0.5)*0.1, (Math.random()*0.12)+0.03, (Math.random()-0.5)*0.1), life: 20 + Math.random()*15
                     });
                 }
             }
 
-            updateProjectilesAndVFX() {
+            updateEngineVFXElements() {
                 for (let i = this.projectiles.length - 1; i >= 0; i--) {
                     const p = this.projectiles[i]; p.mesh.position.add(p.velocity); p.life--;
                     const tx = Math.round(p.mesh.position.x); const ty = Math.round(p.mesh.position.y); const tz = Math.round(p.mesh.position.z);
@@ -521,10 +635,9 @@
                     if (this.getBlockAt(tx, ty, tz) !== BLOCK_TYPES.AIR || p.life <= 0) {
                         if (p.life > 0) {
                             this.setBlockAt(tx, ty, tz, BLOCK_TYPES.AIR);
-                            const col = p.type === 1 ? 0xef4444 : 0x06b6d4;
-                            this.spawnParticles(tx, ty, tz, col, 16);
-                            this.cameraFX.shake = 0.35;
-                            this.awardExperiencePoints(20);
+                            this.spawnImpactVFXParticles(tx, ty, tz, 0xef4444, 16);
+                            this.cameraFX.shake = 0.3;
+                            this.awardExperiencePoints(15);
                         }
                         this.scene.remove(p.mesh); this.projectiles.splice(i, 1);
                     }
@@ -535,28 +648,39 @@
                     if (pt.life <= 0) { this.scene.remove(pt.mesh); this.particles.splice(i, 1); }
                 }
 
-                // Smooth camera parameter field evaluations
                 this.camera.fov += (this.cameraFX.fovTarget - this.camera.fov) * 0.1; this.camera.updateProjectionMatrix(); this.cameraFX.fovTarget = 75;
-                
-                // Continuous operational mana regeneration curves
-                const prog = this.playerProgression;
-                prog.mana = Math.min(prog.maxMana, prog.mana + prog.modifiers.manaRegenRate);
-                this.updateUserInterfaceElements();
+                this.playerProgression.mana = Math.min(this.playerProgression.maxMana, this.playerProgression.mana + 0.12);
+                this.updateVitalsDisplayHUD();
             }
 
-            applyPhysicalKineticCollisions() {
-                const p = this.player; p.velocity.y -= 0.0075;
-                p.velocity.x = Math.max(-0.25, Math.min(0.25, p.velocity.x));
-                p.velocity.z = Math.max(-0.25, Math.min(0.25, p.velocity.z));
+            applyKineticSmoothLocomotion() {
+                const p = this.player; p.velocity.y -= 0.0075; // Constant gravitational constant acceleration force
 
-                p.position.x += p.velocity.x; this.processAxisSeparation('x');
-                p.position.z += p.velocity.z; this.processAxisSeparation('z');
-                p.position.y += p.velocity.y; p.canJump = false; this.processAxisSeparation('y');
+                // Calculate local target direction intent vector grids from flag mappings
+                let targetFwd = 0; let targetStrafe = 0;
+                if (p.inputFlags.forward) targetFwd -= 1; if (p.inputFlags.backward) targetFwd += 1;
+                if (p.inputFlags.left) targetStrafe -= 1; if (p.inputFlags.right) targetStrafe += 1;
 
-                if (p.position.y < -30) { p.position.set(8, 25, 8); p.velocity.set(0,0,0); }
+                let intentDirection = new THREE.Vector3(targetStrafe, 0, targetFwd).normalize();
+                intentDirection.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), p.rotation.y));
+
+                // Apply multi-axis smooth walk acceleration curves mapping calculations
+                p.velocity.x += intentDirection.x * p.acceleration;
+                p.velocity.z += intentDirection.z * p.acceleration;
+
+                // Ground friction damping calculations applied directly to horizontal movement vectors
+                p.velocity.x *= p.dragCoefficient;
+                p.velocity.z *= p.dragCoefficient;
+
+                // Standard bounding box intersection translation passes
+                p.position.x += p.velocity.x; this.processBoundingVolumeCollisionAxis('x');
+                p.position.z += p.velocity.z; this.processBoundingVolumeCollisionAxis('z');
+                p.position.y += p.velocity.y; p.canJump = false; this.processBoundingVolumeCollisionAxis('y');
+
+                if (p.position.y < -30) { p.position.set(8, 20, 8); p.velocity.set(0,0,0); }
             }
 
-            processAxisSeparation(axis) {
+            processBoundingVolumeCollisionAxis(axis) {
                 const p = this.player;
                 const minX = Math.floor(p.position.x - p.width/2); const maxX = Math.floor(p.position.x + p.width/2);
                 const minY = Math.floor(p.position.y - p.height);    const maxY = Math.floor(p.position.y);
@@ -587,37 +711,73 @@
                 }
             }
 
-            toggleSkillTree(openState) {
-                this.isSkillTreeOpen = openState;
-                const overlay = document.getElementById('skillTreeOverlay');
-                if (openState) {
-                    document.exitPointerLock(); overlay.style.display = 'flex'; this.refreshSkillTreeUI();
-                } else {
-                    overlay.style.display = 'none'; document.getElementById('canvas3d').requestPointerLock();
+            buildInterfaceGrids() {
+                // Render Inventory View
+                const invGrid = document.getElementById('ui-inventory-grid'); invGrid.innerHTML = '';
+                for (let key in this.inventory) {
+                    const card = document.createElement('div'); card.className = 'inventory-card';
+                    // Derive matching type value integer index from key name strings
+                    const matchId = Object.keys(BLOCK_NAMES).find(k => BLOCK_NAMES[k].toUpperCase().startsWith(key));
+                    card.innerHTML = `
+                        <span class="inv-icon">${BLOCK_ICONS[matchId] || '💎'}</span>
+                        <span class="inv-count">${this.inventory[key]}</span>
+                        <span class="inv-name">${key}</span>
+                    `;
+                    invGrid.appendChild(card);
                 }
-            }
 
-            refreshSkillTreeUI() {
-                const skills = this.playerProgression.skills;
-                for (let key in skills) {
-                    const node = document.getElementById(`node-${key}`);
-                    const rankLbl = document.getElementById(`rank-${key}`);
-                    rankLbl.textContent = `Rank: ${skills[key]} / 3`;
+                // Render Crafting View
+                const craftList = document.getElementById('ui-crafting-list'); craftList.innerHTML = '';
+                this.craftingRecipes.forEach(recipe => {
+                    let standardCostStr = Object.entries(recipe.cost).map(([mat, count]) => `${count}x ${mat}`).join(', ');
+                    const row = document.createElement('div'); row.className = 'craft-item';
                     
-                    node.className = "skill-node";
-                    if (skills[key] === 3) node.classList.add('maxed');
-                    else if (skills[key] > 0) node.classList.add('unlocked');
-                }
+                    let disableCheck = (recipe.unlockedWeapon && this.hasUnlockedStaff) ? 'disabled style="opacity:0.4;"' : '';
+
+                    row.innerHTML = `
+                        <div class="craft-info">
+                            <h4>${recipe.icon} ${recipe.name}</h4>
+                            <p>${recipe.desc}</p>
+                            <p style="color:var(--accent-mana); margin-top:4px; font-weight:700; font-family:var(--font-mono)">Cost Matrix: [ ${standardCostStr} ]</p>
+                        </div>
+                        <button class="craft-btn" ${disableCheck}>Synthesize Pack</button>
+                    `;
+                    row.querySelector('button').addEventListener('click', () => this.attemptRecipeSynthesis(recipe));
+                    craftList.appendChild(row);
+                });
             }
 
-            updateUserInterfaceElements() {
-                const prog = this.playerProgression;
-                document.getElementById('lbl-lvl').textContent = prog.level;
-                document.getElementById('lbl-xp-text').textContent = `${prog.xp} / ${prog.xpNeeded} XP`;
-                document.getElementById('bar-xp').style.width = `${(prog.xp / prog.xpNeeded)*100}%`;
-                document.getElementById('lbl-mana-text').textContent = `${Math.floor(prog.mana)} / ${prog.maxMana}`;
-                document.getElementById('bar-mana').style.width = `${(prog.mana / prog.maxMana)*100}%`;
-                document.getElementById('lbl-points').textContent = prog.skillPoints;
+            toggleHubOverlay(openState) {
+                this.isHubOpen = openState;
+                const view = document.getElementById('rpgHubOverlay');
+                if (openState) { document.exitPointerLock(); view.style.display = 'flex'; }
+                else { view.style.display = 'none'; document.getElementById('canvas3d').requestPointerLock(); }
+            }
+
+            switchHubTab(tabKey) {
+                document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.hub-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(`tab-btn-${tabKey}`).classList.add('active');
+                document.getElementById(`tab-content-${tabKey}`).classList.add('active');
+            }
+
+            awardExperiencePoints(amt) {
+                const p = this.playerProgression; p.xp += amt;
+                if (p.xp >= p.xpNeeded) {
+                    p.xp -= p.xpNeeded; p.level++; p.xpNeeded = Math.floor(p.xpNeeded * 1.5);
+                    this.pushSystemLog(`🌌 EVOLUTION STAGE ATTAINED: Level ${p.level} core configuration parsed.`);
+                    this.cameraFX.shake = 0.45;
+                }
+                this.updateVitalsDisplayHUD();
+            }
+
+            updateVitalsDisplayHUD() {
+                const p = this.playerProgression;
+                document.getElementById('lbl-lvl').textContent = p.level;
+                document.getElementById('lbl-xp-text').textContent = `${p.xp} / ${p.xpNeeded} XP`;
+                document.getElementById('bar-xp').style.width = `${(p.xp / p.xpNeeded)*100}%`;
+                document.getElementById('lbl-mana-text').textContent = `${Math.floor(p.mana)} / ${p.maxMana}`;
+                document.getElementById('bar-mana').style.width = `${(p.mana / p.maxMana)*100}%`;
             }
 
             setActiveSlot(idx) {
@@ -625,25 +785,25 @@
                 document.querySelectorAll('.hotbar-slot').forEach((s, i) => s.classList.toggle('active', i === idx));
             }
 
-            bindInputInterfaces() {
+            bindHardwareControllerIO() {
                 document.addEventListener('pointerlockchange', () => {
-                    const lock = document.pointerLockElement === document.getElementById('canvas3d');
-                    document.getElementById('instructionsOverlay').style.display = (lock || this.isSkillTreeOpen) ? 'none' : 'flex';
+                    const check = document.pointerLockElement === document.getElementById('canvas3d');
+                    document.getElementById('instructionsOverlay').style.display = (check || this.isHubOpen) ? 'none' : 'flex';
                 });
 
                 window.addEventListener('keydown', e => {
-                    const p = this.player;
-                    if (e.code === 'KeyW') p.moveForward = true; if (e.code === 'KeyS') p.moveBackward = true;
-                    if (e.code === 'KeyA') p.moveLeft = true;    if (e.code === 'KeyD') p.moveRight = true;
-                    if (e.code === 'Space' && p.canJump) { p.velocity.y = 0.16; p.canJump = false; }
+                    const f = this.player.inputFlags;
+                    if (e.code === 'KeyW') f.forward = true; if (e.code === 'KeyS') f.backward = true;
+                    if (e.code === 'KeyA') f.left = true;    if (e.code === 'KeyD') f.right = true;
+                    if (e.code === 'Space' && this.player.canJump) { this.player.velocity.y = 0.155; this.player.canJump = false; }
                     if (e.key >= '1' && e.key <= '4') this.setActiveSlot(parseInt(e.key) - 1);
-                    if (e.code === 'KeyE') this.toggleSkillTree(!this.isSkillTreeOpen);
+                    if (e.code === 'KeyE') this.toggleHubOverlay(!this.isHubOpen);
                 });
 
                 window.addEventListener('keyup', e => {
-                    const p = this.player;
-                    if (e.code === 'KeyW') p.moveForward = false; if (e.code === 'KeyS') p.moveBackward = false;
-                    if (e.code === 'KeyA') p.moveLeft = false;    if (e.code === 'KeyD') p.moveRight = false;
+                    const f = this.player.inputFlags;
+                    if (e.code === 'KeyW') f.forward = false; if (e.code === 'KeyS') f.backward = false;
+                    if (e.code === 'KeyA') f.left = false;    if (e.code === 'KeyD') f.right = false;
                 });
 
                 document.addEventListener('mousemove', e => {
@@ -655,19 +815,21 @@
                 document.addEventListener('mousedown', e => {
                     if (document.pointerLockElement !== document.getElementById('canvas3d')) return;
                     e.preventDefault();
-                    if (e.button === 0) this.executePrimaryAction();
+                    if (e.button === 0) { this.isMiningInputHeld = true; this.executeMagicProjectileCast(); }
                     if (e.button === 2) this.executeSecondaryAction();
                 });
+
+                document.addEventListener('mouseup', e => { if (e.button === 0) this.isMiningInputHeld = false; });
                 window.addEventListener('contextmenu', e => e.preventDefault());
             }
 
             requestPointerLock() { document.getElementById('canvas3d').requestPointerLock(); }
 
             pushSystemLog(msg) {
-                const el = document.createElement('div'); el.className = 'log-msg'; el.textContent = msg;
-                const container = document.getElementById('logContainer'); container.appendChild(el);
-                if (container.children.length > 5) container.removeChild(container.firstChild);
-                setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 4000);
+                const card = document.createElement('div'); card.className = 'log-msg'; card.textContent = msg;
+                const c = document.getElementById('logContainer'); c.appendChild(card);
+                if (c.children.length > 5) c.removeChild(c.firstChild);
+                setTimeout(() => { if (card.parentNode) card.parentNode.removeChild(card); }, 4000);
             }
 
             loop() {
@@ -675,24 +837,17 @@
                 const p = this.player;
 
                 if (document.pointerLockElement === document.getElementById('canvas3d')) {
-                    p.velocity.x *= 0.7; p.velocity.z *= 0.7;
-                    let moveVec = new THREE.Vector3();
-                    if (p.moveForward) moveVec.z -= 1; if (p.moveBackward) moveVec.z += 1;
-                    if (p.moveLeft) moveVec.x -= 1;    if (p.moveRight) moveVec.x += 1;
-                    moveVec.normalize().applyQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), p.rotation.y));
+                    this.applyKineticSmoothLocomotion();
+                    this.synchronizeWorldMeshGrid();
+                    if (this.isMiningInputHeld) this.processHarvestingTick(); else this.resetMiningState();
 
-                    const travelForce = 0.05;
-                    p.velocity.x += moveVec.x * travelForce; p.velocity.z += moveVec.z * travelForce;
-
-                    this.applyPhysicalKineticCollisions();
-                    this.synchronizeChunkGrid();
-
-                    if (p.moveForward || p.moveBackward || p.moveLeft || p.moveRight) this.cameraFX.bob += 0.15;
+                    if (f => p.inputFlags.forward || p.inputFlags.backward || p.inputFlags.left || p.inputFlags.right) this.cameraFX.bob += 0.12;
+                } else {
+                    this.resetMiningState();
                 }
 
-                // Render execution transforms
                 this.camera.position.copy(p.position);
-                this.camera.position.y += Math.sin(this.cameraFX.bob) * 0.04;
+                this.camera.position.y += Math.sin(this.cameraFX.bob) * 0.035; // Head bob matrix transformations
 
                 if (this.cameraFX.shake > 0.01) {
                     this.camera.position.x += (Math.random() - 0.5) * this.cameraFX.shake;
@@ -703,12 +858,13 @@
                 this.camera.quaternion.setFromEuler(new THREE.Euler(p.rotation.x, p.rotation.y, 0, 'YXZ'));
                 document.getElementById('ui-pos').textContent = `X: ${Math.floor(p.position.x)}, Y: ${Math.floor(p.position.y)}, Z: ${Math.floor(p.position.z)}`;
                 
-                this.updateProjectilesAndVFX();
+                this.processDroppedItemsMagneticTick();
+                this.updateEngineVFXElements();
                 this.renderer.render(this.scene, this.camera);
             }
         }
 
-        const engine = new ArcaneRPGSandboxEngine();
+        const engine = new SurvivalSandboxEngine();
         engine.loop();
     </script>
 </body>
