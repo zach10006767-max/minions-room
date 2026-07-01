@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArcaneVoxel 3D: AAA Infinite Magic Engine</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <title>ArcaneVoxel: Advanced RPG Sandbox Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-main: #020305;
-            --bg-panel: rgba(6, 10, 18, 0.85);
-            --border-arcane: rgba(168, 85, 247, 0.4);
-            --glow-arcane: rgba(168, 85, 247, 0.2);
+            --bg-main: #020408;
+            --bg-panel: rgba(8, 12, 24, 0.9);
+            --border-arcane: rgba(147, 51, 234, 0.4);
+            --glow-purple: rgba(147, 51, 234, 0.25);
             --accent-mana: #06b6d4;
-            --accent-ether: #a855f7;
-            --accent-pyre: #f43f5e;
+            --accent-xp: #10b981;
+            --accent-pyre: #ef4444;
+            --accent-void: #8b5cf6;
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
             --font-display: 'Cinzel', serif;
@@ -30,108 +31,132 @@
         #viewportContainer { flex: 1; position: relative; height: 100%; display: flex; flex-direction: column; }
         #canvas3d { width: 100%; flex: 1; display: block; }
 
-        /* AAA Cinematic HUD HUD overlay */
+        /* Cinematic HUD Frame Overlay */
         #cinematicHUD {
             position: absolute; inset: 0; pointer-events: none;
-            border: 24px solid transparent;
-            box-shadow: inset 0 0 80px rgba(0,0,0,0.85);
-            z-index: 80; transition: all 0.3s ease;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.9); z-index: 80;
         }
 
+        /* Top Performance & Vector Telemetry Bar */
         #topTelemetryBar {
-            position: absolute; top: 24px; left: 24px; right: 24px;
+            position: absolute; top: 20px; left: 20px; right: 20px;
             background: var(--bg-panel); border: 1px solid var(--border-arcane);
-            border-radius: 16px; padding: 16px 28px;
+            border-radius: 16px; padding: 14px 24px;
             display: flex; justify-content: space-between; align-items: center;
-            backdrop-filter: blur(32px); z-index: 100;
-            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8), 0 0 20px var(--glow-arcane);
+            backdrop-filter: blur(24px); z-index: 100;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.8), 0 0 20px var(--glow-purple);
         }
+        .engine-title { font-family: var(--font-display); font-size: 15px; font-weight: 900; letter-spacing: 2px; color: #f3e8ff; }
+        .metric-group { display: flex; gap: 32px; }
+        .metric-card { display: flex; flex-direction: column; }
+        .metric-lbl { font-size: 8px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1.5px; }
+        .metric-val { font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: var(--accent-mana); }
 
-        .engine-title { font-family: var(--font-display); font-size: 16px; font-weight: 800; letter-spacing: 2px; color: #e9d5ff; }
-        .metric-group { display: flex; gap: 36px; }
-        .metric-card { display: flex; flex-direction: column; gap: 2px; }
-        .metric-lbl { font-size: 9px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1.5px; }
-        .metric-val { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--accent-mana); }
-
-        /* Dynamic crosshair targeting node */
+        /* Action-Tracking Interface Components */
         #crosshair {
-            position: absolute; top: 50%; left: 50%; width: 24px; height: 24px;
+            position: absolute; top: 50%; left: 50%; width: 20px; height: 20px;
             transform: translate(-50%, -50%); pointer-events: none; z-index: 200;
-            transition: transform 0.1s ease;
         }
-        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(255, 255, 255, 0.4); border-radius: 2px; }
-        #crosshair::before { top: 11px; left: 0; width: 24px; height: 2px; }
-        #crosshair::after { top: 0; left: 11px; width: 2px; height: 24px; }
-        #crosshair.casting { transform: translate(-50%, -50%) scale(1.4) rotate(45deg); }
+        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(255,255,255,0.5); }
+        #crosshair::before { top: 9px; left: 0; width: 20px; height: 2px; }
+        #crosshair::after { top: 0; left: 9px; width: 2px; height: 20px; }
 
-        /* Arcane Spell Selection Hotbar Grid */
-        .hotbar {
-            position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
+        /* Vitals Framework Panels */
+        #vitalsPanel {
+            position: absolute; bottom: 120px; left: 20px; width: 280px;
             background: var(--bg-panel); border: 1px solid var(--border-arcane);
-            padding: 8px; border-radius: 20px; display: flex; gap: 10px; z-index: 100;
-            box-shadow: 0 24px 64px rgba(0,0,0,0.9), 0 0 30px var(--glow-arcane); backdrop-filter: blur(24px);
+            border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px;
+            backdrop-filter: blur(20px); z-index: 100; box-shadow: 0 12px 36px rgba(0,0,0,0.7);
+        }
+        .stat-row { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; font-family: var(--font-mono); }
+        .bar-bg { height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.02); }
+        .bar-fill { height: 100%; width: 100%; transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        /* Advanced RPG Hotbar Matrix */
+        .hotbar {
+            position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: var(--bg-panel); border: 1px solid var(--border-arcane);
+            padding: 8px; border-radius: 20px; display: flex; gap: 8px; z-index: 100;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.9), 0 0 30px var(--glow-purple); backdrop-filter: blur(24px);
         }
         .hotbar-slot {
-            width: 64px; height: 64px; border-radius: 14px; background: rgba(255,255,255,0.01);
-            border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column;
-            justify-content: center; align-items: center; font-size: 26px; cursor: pointer;
-            position: relative; transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            width: 68px; height: 68px; border-radius: 14px; background: rgba(255,255,255,0.01);
+            border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; font-size: 24px; cursor: pointer;
+            position: relative; transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        .hotbar-slot:hover { border-color: rgba(168, 85, 247, 0.6); background: rgba(168, 85, 247, 0.05); }
         .hotbar-slot.active {
-            border-color: var(--accent-ether); background: rgba(168, 85, 247, 0.2);
-            box-shadow: 0 0 20px var(--accent-ether), inset 0 0 12px var(--accent-ether);
-            transform: scale(1.1) translateY(-6px);
+            border-color: var(--accent-void); background: rgba(139, 92, 246, 0.15);
+            box-shadow: 0 0 20px var(--accent-void), inset 0 0 10px var(--accent-void);
+            transform: scale(1.08) translateY(-4px);
         }
         .slot-key { position: absolute; top: 4px; left: 6px; font-size: 9px; font-family: var(--font-mono); color: var(--text-secondary); }
-        .slot-name { position: absolute; bottom: -20px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); opacity: 0; transition: opacity 0.2s; }
-        .hotbar-slot.active .slot-name { opacity: 1; color: #e9d5ff; }
+        .slot-lbl { position: absolute; bottom: 4px; font-size: 8px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px; }
+        .hotbar-slot.active .slot-lbl { color: #f3e8ff; }
 
-        /* Cinematic Viewport Notifications */
+        /* Interactive Upgrade Node Matrix (Skill Tree UI Overlay) */
+        #skillTreeOverlay {
+            position: absolute; inset: 0; background: rgba(3, 5, 10, 0.85);
+            display: none; justify-content: center; align-items: center; z-index: 300;
+            backdrop-filter: blur(16px); padding: 40px; animation: fadeIn 0.25s ease;
+        }
+        .tree-container {
+            background: #060810; border: 1px solid var(--border-arcane);
+            width: 100%; max-width: 840px; border-radius: 24px; padding: 32px;
+            box-shadow: 0 32px 80px rgba(0,0,0,0.9), 0 0 40px rgba(147, 51, 234, 0.15);
+            display: flex; flex-direction: column; gap: 24px;
+        }
+        .tree-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 16px; }
+        .tree-header h2 { font-family: var(--font-display); font-size: 24px; letter-spacing: 1px; color: #f3e8ff; }
+        
+        .node-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .skill-node {
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px; padding: 20px; cursor: pointer; transition: all 0.2s ease;
+            display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden;
+        }
+        .skill-node:hover:not(.maxed) { border-color: var(--accent-void); background: rgba(139, 92, 246, 0.04); transform: translateY(-2px); }
+        .skill-node.unlocked { border-color: var(--accent-mana); background: rgba(6, 182, 212, 0.05); }
+        .skill-node.maxed { border-color: var(--accent-xp); background: rgba(16, 185, 129, 0.08); cursor: default; }
+        .node-name { font-weight: 700; font-size: 14px; color: #f1f5f9; }
+        .node-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
+        .node-rank { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--accent-void); text-transform: uppercase; margin-top: auto; }
+        .skill-node.maxed .node-rank { color: var(--accent-xp); }
+
+        .close-btn {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-primary); padding: 10px 20px; border-radius: 10px; font-weight: 600;
+            font-size: 12px; cursor: pointer; transition: all 0.15s;
+        }
+        .close-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+
+        /* Systems Logging Pipeline */
         #logContainer {
-            position: absolute; bottom: 120px; left: 32px; width: 380px;
-            display: flex; flex-direction: column; gap: 8px; pointer-events: none; z-index: 100;
+            position: absolute; bottom: 24px; left: 20px; width: 340px;
+            display: flex; flex-direction: column; gap: 6px; pointer-events: none; z-index: 100;
         }
         .log-msg {
-            font-family: var(--font-mono); font-size: 11px; background: rgba(4, 6, 11, 0.85);
-            border-left: 3px solid var(--accent-ether); padding: 10px 16px; border-radius: 0 8px 8px 0;
-            backdrop-filter: blur(12px); color: #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            animation: slideIn 0.25s cubic-bezier(0.215, 0.610, 0.355, 1) forwards;
+            font-family: var(--font-mono); font-size: 11px; background: rgba(4, 6, 12, 0.85);
+            border-left: 3px solid var(--accent-void); padding: 10px 14px; border-radius: 0 8px 8px 0;
+            backdrop-filter: blur(8px); color: #e2e8f0; animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-
-        /* Ambient Vitals Bars Overlay */
-        #vitalsContainer {
-            position: absolute; bottom: 36px; left: 32px; width: 240px;
-            display: flex; flex-direction: column; gap: 8px; z-index: 100; pointer-events: none;
-        }
-        .vitals-bar-bg { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; border: 1px solid rgba(255,255,255,0.02); }
-        .vitals-bar-fill { height: 100%; width: 100%; transition: width 0.3s ease; }
 
         #instructionsOverlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, rgba(2, 3, 5, 0.98), rgba(10, 6, 18, 0.98)); display: flex;
-            flex-direction: column; justify-content: center; align-items: center;
-            z-index: 150; text-align: center; padding: 40px; transition: opacity 0.4s ease;
+            position: absolute; inset: 0; background: linear-gradient(135deg, #020306, #090614);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 400; text-align: center; padding: 40px; transition: opacity 0.3s ease;
         }
-        #instructionsOverlay h1 { font-family: var(--font-display); font-size: 44px; font-weight: 800; color: #f3e8ff; margin-bottom: 8px; letter-spacing: 4px; text-shadow: 0 0 30px var(--accent-ether); }
-        #instructionsOverlay p { max-width: 600px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 36px; font-size: 14px; }
-        
+        #instructionsOverlay h1 { font-family: var(--font-display); font-size: 40px; font-weight: 900; letter-spacing: 3px; color: #f3e8ff; margin-bottom: 12px; }
+        #instructionsOverlay p { max-width: 580px; color: var(--text-secondary); font-size: 13px; line-height: 1.6; margin-bottom: 32px; }
         .btn-prime {
-            background: linear-gradient(135deg, #7c3aed, #6d28d9);
-            color: white; border: none; padding: 16px 36px; border-radius: 12px;
-            font-size: 13px; font-weight: 700; cursor: pointer; letter-spacing: 1.5px; text-transform: uppercase;
-            transition: all 0.25s ease; box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35), 0 0 15px var(--glow-arcane);
+            background: linear-gradient(135deg, #6d28d9, #5b21b6); color: white; border: none;
+            padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 12px; text-transform: uppercase;
+            letter-spacing: 1px; cursor: pointer; box-shadow: 0 8px 24px rgba(109, 40, 217, 0.35); transition: all 0.2s;
         }
-        .btn-prime:hover { background: linear-gradient(135deg, #8b5cf6, #7c3aed); transform: translateY(-2px); box-shadow: 0 12px 32px rgba(124, 58, 237, 0.5); }
-        
-        .keybind-matrix {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 40px;
-            font-family: var(--font-mono); font-size: 12px; color: #e2e8f0;
-            margin-bottom: 40px; text-align: left; background: rgba(255,255,255,0.01);
-            padding: 24px 36px; border-radius: 16px; border: 1px solid rgba(168, 85, 247, 0.15);
-        }
+        .btn-prime:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(109, 40, 217, 0.5); }
 
-        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { transform: translateX(-15px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
 </head>
 <body>
@@ -140,41 +165,72 @@
 
     <div id="viewportContainer">
         <div id="topTelemetryBar">
-            <div class="engine-title">ARCANE VOXEL ARCHITECTURE</div>
+            <div class="engine-title">ArcaneVoxel Sandbox Core</div>
             <div class="metric-group">
-                <div class="metric-card"><span class="metric-lbl">Raster Speed</span><span class="metric-val" id="ui-fps">60 FPS</span></div>
+                <div class="metric-card"><span class="metric-lbl">Raster Engine</span><span class="metric-val" id="ui-fps">60 FPS</span></div>
                 <div class="metric-card"><span class="metric-lbl">Coordinates</span><span class="metric-val" id="ui-pos">X: 8, Y: 24, Z: 8</span></div>
-                <div class="metric-card"><span class="metric-lbl">Aether Memory</span><span class="metric-val" id="ui-chunks">Chunks: 0</span></div>
+                <div class="metric-card"><span class="metric-lbl">Active Pools</span><span class="metric-val" id="ui-chunks">Chunks: 0</span></div>
             </div>
         </div>
 
         <div id="crosshair"></div>
         <div id="logContainer"></div>
 
-        <div id="vitalsContainer">
-            <div style="display:flex; justify-content:space-between; font-size:10px; font-weight:700; letter-spacing:1px; color:var(--accent-mana)"><span>MANA RESONANCE</span><span>100%</span></div>
-            <div class="vitals-bar-bg"><div class="vitals-bar-fill" style="background:linear-gradient(90deg, #06b6d4, #3b82f6)"></div></div>
+        <div id="vitalsPanel">
+            <div>
+                <div class="stat-row" style="color:var(--accent-xp)"><span>LEVEL <span id="lbl-lvl">1</span> Matrix</span><span id="lbl-xp-text">0 / 100 XP</span></div>
+                <div class="bar-bg" style="margin-top:4px;"><div id="bar-xp" class="bar-fill" style="background:var(--accent-xp); width:0%;"></div></div>
+            </div>
+            <div>
+                <div class="stat-row" style="color:var(--accent-mana)"><span>MANA RESONANCE</span><span id="lbl-mana-text">100 / 100</span></div>
+                <div class="bar-bg" style="margin-top:4px;"><div id="bar-mana" class="bar-fill" style="background:var(--accent-mana); width:100%;"></div></div>
+            </div>
+            <div class="stat-row" style="color:#e9d5ff; border-top:1px solid rgba(255,255,255,0.06); padding-top:8px; margin-top:2px;">
+                <span>NEXUS SKILL POINTS:</span><span id="lbl-points" style="font-size:12px; font-weight:700; color:var(--accent-void)">0</span>
+            </div>
+            <button class="close-btn" style="width:100%; padding:6px; font-size:10px; margin-top:4px;" onclick="engine.toggleSkillTree(true)">Open Skill Tree [E]</button>
         </div>
 
         <div class="hotbar" id="hotbar">
-            <div class="hotbar-slot active" onclick="engine.setActiveSlot(0)"><span class="slot-key">1</span>🔮<span class="slot-name">Aether Burst</span></div>
-            <div class="hotbar-slot" onclick="engine.setActiveSlot(1)"><span class="slot-key">2</span>🔥<span class="slot-name">Pyre Strike</span></div>
-            <div class="hotbar-slot" onclick="engine.setActiveSlot(2)"><span class="slot-key">3</span>🌿<span class="slot-name">Earthy Form</span></div>
-            <div class="hotbar-slot" onclick="engine.setActiveSlot(3)"><span class="slot-key">4</span>⚡<span class="slot-name">Volt Transmute</span></div>
+            <div class="hotbar-slot active" onclick="engine.setActiveSlot(0)"><span class="slot-key">1</span>⛏️<span class="slot-lbl">Pickaxe</span></div>
+            <div class="hotbar-slot" onclick="engine.setActiveSlot(1)"><span class="slot-key">2</span>🔥<span class="slot-lbl">Pyre Staff</span></div>
+            <div class="hotbar-slot" onclick="engine.setActiveSlot(2)"><span class="slot-key">3</span>⚡<span class="slot-lbl">Volt Beam</span></div>
+            <div class="hotbar-slot" onclick="engine.setActiveSlot(3)"><span class="slot-key">4</span>🧱<span class="slot-lbl">Aetherium</span></div>
+        </div>
+
+        <div id="skillTreeOverlay">
+            <div class="tree-container">
+                <div class="tree-header">
+                    <div>
+                        <h2>Nexus Skill Matrix Alignment</h2>
+                        <p style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Optimize your alignment tokens to rewrite world physics variables.</p>
+                    </div>
+                    <button class="close-btn" onclick="engine.toggleSkillTree(false)">Return to World [Escape]</button>
+                </div>
+                <div class="node-grid">
+                    <div class="skill-node" id="node-miner" onclick="engine.purchaseSkillNode('miner')">
+                        <div class="node-name">Miner's Resonance</div>
+                        <div class="node-desc">Accelerates molecular structural disintegration waves, boosting block harvest speed.</div>
+                        <div class="node-rank" id="rank-miner">Rank: 0 / 3</div>
+                    </div>
+                    <div class="skill-node" id="node-mage" onclick="engine.purchaseSkillNode('mage')">
+                        <div class="node-name">Arcane Intensifier</div>
+                        <div class="node-desc">Amplifies magical blast radii and scales base kinetic energy velocity equations.</div>
+                        <div class="node-rank" id="rank-mage">Rank: 0 / 3</div>
+                    </div>
+                    <div class="skill-node" id="node-channeler" onclick="engine.purchaseSkillNode('channeler')">
+                        <div class="node-name">Chrono Channeler</div>
+                        <div class="node-desc">Optimizes player conversion fields, augmenting absolute mana restoration rates.</div>
+                        <div class="node-rank" id="rank-channeler">Rank: 0 / 3</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="instructionsOverlay" onclick="engine.requestPointerLock()">
-            <h1>ARCANE VOXEL v1.0</h1>
-            <p>Experience an immersive, high-performance voxel sandbox powered by a hardware-accelerated chunk-meshing processor, predictive bounding-volume spatial mechanics, and a real-time particle-light projection system.</p>
-            <div class="keybind-matrix">
-                <div>[W, A, S, D] &rarr; Spatial Kinetic Locomotion</div>
-                <div>[LEFT CLICK] &rarr; Project Active Arcane Spell</div>
-                <div>[SPACEBAR]  &rarr; Gravitational Suspension Leap</div>
-                <div>[RIGHT CLICK]&rarr; Transmute / Construct Voxel Element</div>
-                <div>[MOUSE]      &rarr; Dual-Axis Camera Vision Look</div>
-                <div>[Keys 1 - 4] &rarr; Cycle Active Magical Tuning Matrix</div>
-            </div>
-            <button class="btn-prime">Synchronize Consciousness Matrix</button>
+            <h1>ARCANE VOXEL: RPG sandbox CORE</h1>
+            <p>Deploying a production-grade WebGL voxel pipeline with procedural fractional Brownian terrain mapping, rigid sub-pixel AABB collision vectors, dynamic spell structures, and an interface configuration system.</p>
+            <button class="btn-prime">Synchronize Engine Vectors</button>
         </div>
         <div id="canvas3d"></div>
     </div>
@@ -183,7 +239,7 @@
 
     <script>
         // =========================================================================
-        // PSEUDO-RANDOM DETERMINISTIC NOISE ENGINE (2D MAP OVERLAYS)
+        // MATHEMATICAL LANDSCAPE DETERMINISTIC NOISE ENGINE
         // =========================================================================
         const PerlinNoiseEngine = new function() {
             this.perm = new Uint8Array(512); const src = Array.from({length: 256}, (_, i) => i);
@@ -202,92 +258,90 @@
         };
 
         // =========================================================================
-        // ENGINE PARAMS & CONFIGURATIONS
+        // ENGINE CONSTANTS & TYPE DEFINITIONS
         // =========================================================================
-        const SPELL_TYPES = { AETHER: 0, PYRE: 1, EARTH: 2, VOLT: 3 };
         const BLOCK_TYPES = { AIR: 0, AETHERIUM: 1, NETHERRACK: 2, OBSIDIAN: 3, COAL: 4, EMERALD: 5 };
-        const BLOCK_COLORS = { 1: 0x4c1d95, 2: 0x991b1b, 3: 0x0f172a, 4: 0x1e293b, 5: 0x047857 };
-
+        const BLOCK_COLORS = { 1: 0x581c87, 2: 0x991b1b, 3: 0x0f172a, 4: 0x334155, 5: 0x065f46 };
         const CHUNK_SIZE = 16; const CHUNK_HEIGHT = 32; const RENDER_DISTANCE = 3;
 
-        class AAAMagicEngine {
+        class ArcaneRPGSandboxEngine {
             constructor() {
                 this.chunks = {}; this.activeMeshes = {}; this.interactableObjectsList = [];
                 this.projectiles = []; this.particles = []; this.activeSlotIndex = 0;
-                
-                // Cinematic camera state tracking mechanics
-                this.fovTarget = 75; this.shakeForce = 0; this.bobTimer = 0;
+                this.isSkillTreeOpen = false;
 
+                // Character Progression Matrix Models
+                this.playerProgression = {
+                    level: 1, xp: 0, xpNeeded: 100, skillPoints: 0,
+                    mana: 100, maxMana: 100,
+                    skills: { miner: 0, mage: 0, channeler: 0 },
+                    modifiers: { harvestMultiplier: 1.0, spellDamage: 10, manaRegenRate: 0.15 }
+                };
+
+                this.cameraFX = { shake: 0, bob: 0, fovTarget: 75 };
                 this.player = {
-                    position: new THREE.Vector3(8, 22, 8), velocity: new THREE.Vector3(), rotation: new THREE.Vector2(),
+                    position: new THREE.Vector3(8, 24, 8), velocity: new THREE.Vector3(), rotation: new THREE.Vector2(),
                     moveForward: false, moveBackward: false, moveLeft: false, moveRight: false, canJump: false, width: 0.6, height: 1.8
                 };
 
-                this.initGraphicsPipeline();
-                this.synchronizeWorldMap();
-                this.bindHardwareInterfaces();
-                this.pushSystemLog("🔮 Nexus Continuum online. Infusing spatial engine fields with ether.");
+                this.initRenderPipeline();
+                this.synchronizeChunkGrid();
+                this.bindInputInterfaces();
+                this.pushSystemLog("🔮 RPG Systems Initialized. Welcome back, Architect.");
             }
 
-            initGraphicsPipeline() {
-                const container = document.getElementById('canvas3d');
+            initRenderPipeline() {
+                const box = document.getElementById('canvas3d');
                 this.scene = new THREE.Scene();
-                this.scene.background = new THREE.Color(0x030206);
-                this.scene.fog = new THREE.FogExp2(0x030206, 0.015);
+                this.scene.background = new THREE.Color(0x020306);
+                this.scene.fog = new THREE.FogExp2(0x020306, 0.018);
 
-                this.camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-                
+                this.camera = new THREE.PerspectiveCamera(75, box.clientWidth / box.clientHeight, 0.1, 1000);
                 this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-                this.renderer.setSize(container.clientWidth, container.clientHeight);
-                container.appendChild(this.renderer.domElement);
+                this.renderer.setSize(box.clientWidth, box.clientHeight);
+                box.appendChild(this.renderer.domElement);
 
-                // High-contrast atmospheric lighting pairs
-                const ambientLight = new THREE.AmbientLight(0x1e1b4b, 0.6);
-                this.scene.add(ambientLight);
+                this.scene.add(new THREE.AmbientLight(0x1e1b4b, 0.5));
+                const sun = new THREE.DirectionalLight(0xa78bfa, 0.5);
+                sun.position.set(30, 50, 10); this.scene.add(sun);
 
-                this.directionalLight = new THREE.DirectionalLight(0xc084fc, 0.4);
-                this.directionalLight.position.set(20, 40, 10);
-                this.scene.add(this.directionalLight);
-
-                this.raycaster = new THREE.Raycaster(); this.raycaster.far = 8;
+                this.raycaster = new THREE.Raycaster(); this.raycaster.far = 7;
             }
 
-            synchronizeWorldMap() {
+            synchronizeChunkGrid() {
                 const cx = Math.floor(this.player.position.x / CHUNK_SIZE);
                 const cz = Math.floor(this.player.position.z / CHUNK_SIZE);
 
                 for (let x = -RENDER_DISTANCE; x <= RENDER_DISTANCE; x++) {
                     for (let z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
                         const tkx = cx + x; const tkz = cz + z; const key = `${tkx},${tkz}`;
-                        if (!this.chunks[key]) this.generateProceduralDataChunk(tkx, tkz);
+                        if (!this.chunks[key]) this.compileProceduralChunk(tkx, tkz);
                     }
                 }
-                
                 for (let key in this.chunks) {
-                    if (!this.activeMeshes[key]) this.buildInstancedHardwareMesh(key);
+                    if (!this.activeMeshes[key]) this.instantiateInstancedMeshGroup(key);
                 }
-                document.getElementById('ui-chunks').textContent = `Chunks Loaded: ${Object.keys(this.chunks).length}`;
+                document.getElementById('ui-chunks').textContent = `Chunks: ${Object.keys(this.chunks).length}`;
             }
 
-            generateProceduralDataChunk(cx, cz) {
+            compileProceduralChunk(cx, cz) {
                 const key = `${cx},${cz}`; const data = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
 
                 for (let x = 0; x < CHUNK_SIZE; x++) {
                     for (let z = 0; z < CHUNK_SIZE; z++) {
                         const gx = cx * CHUNK_SIZE + x; const gz = cz * CHUNK_SIZE + z;
-                        
-                        let baseNoise = PerlinNoiseEngine.noise2D(gx * 0.03, gz * 0.03) * 10;
-                        baseNoise += PerlinNoiseEngine.noise2D(gx * 0.09, gz * 0.09) * 3;
-                        const surfaceY = Math.floor(15 + baseNoise);
+                        let n = PerlinNoiseEngine.noise2D(gx * 0.04, gz * 0.04) * 8;
+                        n += PerlinNoiseEngine.noise2D(gx * 0.1, gz * 0.1) * 2;
+                        const surface = Math.floor(14 + n);
 
                         for (let y = 0; y < CHUNK_HEIGHT; y++) {
                             const idx = x + (y * CHUNK_SIZE) + (z * CHUNK_SIZE * CHUNK_HEIGHT);
-                            if (y === surfaceY) {
-                                data[idx] = (Math.random() < 0.15) ? BLOCK_TYPES.AETHERIUM : BLOCK_TYPES.NETHERRACK;
-                            } else if (y < surfaceY && y > surfaceY - 5) {
+                            if (y === surface) {
+                                data[idx] = (Math.random() < 0.08) ? BLOCK_TYPES.AETHERIUM : BLOCK_TYPES.NETHERRACK;
+                            } else if (y < surface && y > surface - 4) {
                                 data[idx] = BLOCK_TYPES.OBSIDIAN;
-                            } else if (y <= surfaceY - 5) {
-                                data[idx] = (Math.random() < 0.02) ? BLOCK_TYPES.EMERALD : BLOCK_TYPES.COAL;
+                            } else if (y <= surface - 4) {
+                                data[idx] = (Math.random() < 0.03) ? BLOCK_TYPES.EMERALD : BLOCK_TYPES.COAL;
                             } else {
                                 data[idx] = BLOCK_TYPES.AIR;
                             }
@@ -297,20 +351,20 @@
                 this.chunks[key] = data;
             }
 
-            buildInstancedHardwareMesh(key) {
+            instantiateInstancedMeshGroup(key) {
                 const parts = key.split(','); const cx = parseInt(parts[0]); const cz = parseInt(parts[1]);
-                const data = this.chunks[key]; const trackingMap = {}; const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+                const data = this.chunks[key]; const frequencyMap = {}; const geo = new THREE.BoxGeometry(1, 1, 1);
 
                 for (let i = 0; i < data.length; i++) {
-                    if (data[i] !== BLOCK_TYPES.AIR) trackingMap[data[i]] = (trackingMap[data[i]] || 0) + 1;
+                    if (data[i] !== BLOCK_TYPES.AIR) frequencyMap[data[i]] = (frequencyMap[data[i]] || 0) + 1;
                 }
 
-                const rootGroup = new THREE.Group();
+                const group = new THREE.Group();
 
-                for (let type in trackingMap) {
-                    const mat = new THREE.MeshStandardMaterial({ color: BLOCK_COLORS[type], roughness: 0.5, metalness: 0.2, flatShading: true });
-                    const instMesh = new THREE.InstancedMesh(boxGeo, mat, trackingMap[type]);
-                    let idxOffset = 0; const dummy = new THREE.Object3D();
+                for (let type in frequencyMap) {
+                    const mat = new THREE.MeshStandardMaterial({ color: BLOCK_COLORS[type], roughness: 0.6, metalness: 0.1, flatShading: true });
+                    const instMesh = new THREE.InstancedMesh(geo, mat, frequencyMap[type]);
+                    let offset = 0; const dummy = new THREE.Object3D();
 
                     for (let x = 0; x < CHUNK_SIZE; x++) {
                         for (let z = 0; z < CHUNK_SIZE; z++) {
@@ -319,16 +373,16 @@
                                 if (data[didx] === parseInt(type)) {
                                     dummy.position.set(cx * CHUNK_SIZE + x, y, cz * CHUNK_SIZE + z);
                                     dummy.updateMatrix();
-                                    instMesh.setMatrixAt(idxOffset++, dummy.matrix);
+                                    instMesh.setMatrixAt(offset++, dummy.matrix);
                                 }
                             }
                         }
                     }
                     instMesh.instanceMatrix.needsUpdate = true;
-                    rootGroup.add(instMesh);
+                    group.add(instMesh);
                 }
 
-                this.scene.add(rootGroup); this.activeMeshes[key] = rootGroup;
+                this.scene.add(group); this.activeMeshes[key] = group;
                 this.interactableObjectsList = Object.values(this.activeMeshes).flatMap(g => g.children);
             }
 
@@ -348,101 +402,152 @@
                 this.chunks[key][lx + (y * CHUNK_SIZE) + (lz * CHUNK_SIZE * CHUNK_HEIGHT)] = type;
 
                 if (this.activeMeshes[key]) { this.scene.remove(this.activeMeshes[key]); delete this.activeMeshes[key]; }
-                this.buildInstancedHardwareMesh(key);
+                this.instantiateInstancedMeshGroup(key);
             }
 
-            castActiveSpell() {
-                this.fovTarget = 88; this.shakeForce = 0.22;
-                document.getElementById('crosshair').classList.add('casting');
-                setTimeout(() => document.getElementById('crosshair').classList.remove('casting'), 150);
+            executePrimaryAction() {
+                // Primary action conditional evaluation mapping
+                if (this.activeSlotIndex === 0) {
+                    // Tool Harvest Matrix Mode
+                    this.raycaster.setFromCamera(new THREE.Vector2(0,0), this.camera);
+                    const hits = this.raycaster.intersectObjects(this.interactableObjectsList);
+                    if (hits.length > 0) {
+                        const pt = hits[0].point.clone().sub(hits[0].face.normal.clone().multiplyScalar(0.5));
+                        const tx = Math.round(pt.x); const ty = Math.round(pt.y); const tz = Math.round(pt.z);
+                        const block = this.getBlockAt(tx, ty, tz);
 
-                const spellColor = [0x06b6d4, #ff3366, 0xa855f7, 0x10b981][this.activeSlotIndex];
-                const spellNames = ["Aether Burst", "Pyre Strike", "Earthy Form", "Volt Transmute"];
-                this.pushSystemLog(`✨ Manifested spell matrix: [${spellNames[this.activeSlotIndex]}]`);
-
-                // Create physical dynamic projectile entity
-                const geo = new THREE.SphereGeometry(0.15, 8, 8);
-                const mat = new THREE.MeshBasicMaterial({ color: spellColor });
-                const mesh = new THREE.Mesh(geo, mat);
-                
-                // Position sphere slightly offset from camera vector path
-                mesh.position.copy(this.player.position).sub(new THREE.Vector3(0, 0.3, 0));
-                
-                const forwardDir = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
-                mesh.position.add(forwardDir.clone().multiplyScalar(0.5));
-
-                // Accompany spell matrix with a dynamic light component
-                const light = new THREE.PointLight(spellColor, 2.5, 8);
-                mesh.add(light); this.scene.add(mesh);
-
-                this.projectiles.push({
-                    mesh, velocity: forwardDir.multiplyScalar(0.48), life: 60, type: this.activeSlotIndex
-                });
-            }
-
-            transmuteTargetBlockLocal() {
-                this.raycaster.setFromCamera(new THREE.Vector2(0,0), this.camera);
-                const intersects = this.raycaster.intersectObjects(this.interactableObjectsList);
-                if (intersects.length > 0) {
-                    const hitPoint = intersects[0].point.clone().add(intersects[0].face.normal.clone().multiplyScalar(0.5));
-                    const tx = Math.floor(hitPoint.x); const ty = Math.floor(hitPoint.y); const tz = Math.floor(hitPoint.z);
-                    this.setBlockAt(tx, ty, tz, BLOCK_TYPES.AETHERIUM);
-                    this.triggerImpactParticles(tx, ty, tz, 0xa855f7);
+                        if (block !== BLOCK_TYPES.AIR) {
+                            this.setBlockAt(tx, ty, tz, BLOCK_TYPES.AIR);
+                            this.spawnParticles(tx, ty, tz, BLOCK_COLORS[block], 12);
+                            this.cameraFX.shake = 0.15;
+                            
+                            // Scale progression reward integers with modifier traits
+                            const earnedXP = Math.floor(15 * this.playerProgression.modifiers.harvestMultiplier);
+                            this.awardExperiencePoints(earnedXP);
+                        }
+                    }
+                } else if (this.activeSlotIndex === 1 || this.activeSlotIndex === 2) {
+                    // Arcane Spell Cast Discharges
+                    const cost = this.activeSlotIndex === 1 ? 20 : 15;
+                    if (this.playerProgression.mana >= cost) {
+                        this.playerProgression.mana -= cost;
+                        this.castSpellProjectile(this.activeSlotIndex);
+                    } else {
+                        this.pushSystemLog("❌ Insufficient Mana Reserves to fire Spell Component.");
+                    }
                 }
             }
 
-            triggerImpactParticles(x, y, z, color) {
-                const particleCount = 18;
-                const pGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
-                const pMat = new THREE.MeshBasicMaterial({ color: color });
+            executeSecondaryAction() {
+                // Build Matrix Placement Interfaces
+                this.raycaster.setFromCamera(new THREE.Vector2(0,0), this.camera);
+                const hits = this.raycaster.intersectObjects(this.interactableObjectsList);
+                if (hits.length > 0) {
+                    const norm = hits[0].face.normal;
+                    const pt = hits[0].point.clone().sub(norm.clone().multiplyScalar(0.5));
+                    const bx = Math.round(pt.x) + norm.x; const by = Math.round(pt.y) + norm.y; const bz = Math.round(pt.z) + norm.z;
 
-                for(let i=0; i<particleCount; i++) {
-                    const pMesh = new THREE.Mesh(pGeo, pMat);
-                    pMesh.position.set(x + (Math.random()-0.5), y + 0.5, z + (Math.random()-0.5));
-                    this.scene.add(pMesh);
+                    this.setBlockAt(bx, by, bz, BLOCK_TYPES.AETHERIUM);
+                    this.spawnParticles(bx, by, bz, BLOCK_COLORS[BLOCK_TYPES.AETHERIUM], 8);
+                }
+            }
+
+            castSpellProjectile(type) {
+                this.cameraFX.fovTarget = 86; this.cameraFX.shake = 0.2;
+                const color = type === 1 ? 0xef4444 : 0x06b6d4;
+                
+                const geo = new THREE.SphereGeometry(0.18, 8, 8);
+                const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color }));
+                mesh.position.copy(this.player.position).sub(new THREE.Vector3(0, 0.25, 0));
+
+                const dir = new THREE.Vector3(0,0,-1).applyQuaternion(this.camera.quaternion);
+                mesh.position.add(dir.clone().multiplyScalar(0.4));
+                mesh.add(new THREE.PointLight(color, 2, 8)); this.scene.add(mesh);
+
+                this.projectiles.push({
+                    mesh, velocity: dir.multiplyScalar(0.52), life: 70, type
+                });
+                this.pushSystemLog(`✨ Fired Spell Matrix Module [${type === 1 ? 'Pyre Strike' : 'Volt Beam'}]`);
+            }
+
+            awardExperiencePoints(amt) {
+                const prog = this.playerProgression; prog.xp += amt;
+                this.pushSystemLog(`⚡ Earned +${amt} Alignment Experience Points.`);
+                
+                if (prog.xp >= prog.xpNeeded) {
+                    prog.xp -= prog.xpNeeded; prog.level++;
+                    prog.skillPoints += 1;
+                    prog.xpNeeded = Math.floor(prog.xpNeeded * 1.4);
+                    this.pushSystemLog(`🌌 LEVEL UP! Unlocked Nexus Node Tier Level ${prog.level}.`);
+                    this.cameraFX.shake = 0.4;
+                }
+                this.updateUserInterfaceElements();
+            }
+
+            purchaseSkillNode(skillKey) {
+                const prog = this.playerProgression;
+                if (prog.skillPoints > 0 && prog.skills[skillKey] < 3) {
+                    prog.skillPoints--; prog.skills[skillKey]++;
+                    
+                    // Mutate absolute system physics logic based on upgrade choices
+                    if (skillKey === 'miner') prog.modifiers.harvestMultiplier += 0.4;
+                    if (skillKey === 'mage') prog.modifiers.spellDamage += 6;
+                    if (skillKey === 'channeler') prog.modifiers.manaRegenRate += 0.12;
+
+                    this.pushSystemLog(`✅ Upgraded ${skillKey} node structure to Rank ${prog.skills[skillKey]}.`);
+                    this.updateUserInterfaceElements();
+                    this.refreshSkillTreeUI();
+                }
+            }
+
+            spawnParticles(x, y, z, color, count) {
+                const geo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+                const mat = new THREE.MeshBasicMaterial({ color });
+                for (let i = 0; i < count; i++) {
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.set(x + (Math.random()-0.5), y + 0.5, z + (Math.random()-0.5));
+                    this.scene.add(mesh);
                     this.particles.push({
-                        mesh: pMesh,
-                        velocity: new THREE.Vector3((Math.random()-0.5)*0.1, (Math.random()*0.15)+0.05, (Math.random()-0.5)*0.1),
-                        life: 30 + Math.random()*20
+                        mesh, velocity: new THREE.Vector3((Math.random()-0.5)*0.12, (Math.random()*0.15)+0.04, (Math.random()-0.5)*0.12), life: 25 + Math.random()*20
                     });
                 }
             }
 
-            updateProjectilesAndEffects() {
-                // Loop backwards to safely drop spliced vectors
+            updateProjectilesAndVFX() {
                 for (let i = this.projectiles.length - 1; i >= 0; i--) {
                     const p = this.projectiles[i]; p.mesh.position.add(p.velocity); p.life--;
-
-                    const tx = Math.round(p.mesh.position.x);
-                    const ty = Math.round(p.mesh.position.y);
-                    const tz = Math.round(p.mesh.position.z);
+                    const tx = Math.round(p.mesh.position.x); const ty = Math.round(p.mesh.position.y); const tz = Math.round(p.mesh.position.z);
 
                     if (this.getBlockAt(tx, ty, tz) !== BLOCK_TYPES.AIR || p.life <= 0) {
                         if (p.life > 0) {
                             this.setBlockAt(tx, ty, tz, BLOCK_TYPES.AIR);
-                            const explosionColor = [0x06b6d4, 0xf43f5e, 0xa855f7, 0x10b981][p.type];
-                            this.triggerImpactParticles(tx, ty, tz, explosionColor);
-                            this.shakeForce = 0.35; // Trigger impact shake explosion reaction forces
+                            const col = p.type === 1 ? 0xef4444 : 0x06b6d4;
+                            this.spawnParticles(tx, ty, tz, col, 16);
+                            this.cameraFX.shake = 0.35;
+                            this.awardExperiencePoints(20);
                         }
                         this.scene.remove(p.mesh); this.projectiles.splice(i, 1);
                     }
                 }
 
                 for (let i = this.particles.length - 1; i >= 0; i--) {
-                    const pt = this.particles[i];
-                    pt.velocity.y -= 0.005; // Gravity pull calculation on sub-particles
-                    pt.mesh.position.add(pt.velocity); pt.life--;
+                    const pt = this.particles[i]; pt.velocity.y -= 0.004; pt.mesh.position.add(pt.velocity); pt.life--;
                     if (pt.life <= 0) { this.scene.remove(pt.mesh); this.particles.splice(i, 1); }
                 }
 
-                // Smooth cinematic camera visual return lines
-                this.camera.fov += (this.fovTarget - this.camera.fov) * 0.1;
-                this.camera.updateProjectionMatrix(); this.fovTarget = 75;
+                // Smooth camera parameter field evaluations
+                this.camera.fov += (this.cameraFX.fovTarget - this.camera.fov) * 0.1; this.camera.updateProjectionMatrix(); this.cameraFX.fovTarget = 75;
+                
+                // Continuous operational mana regeneration curves
+                const prog = this.playerProgression;
+                prog.mana = Math.min(prog.maxMana, prog.mana + prog.modifiers.manaRegenRate);
+                this.updateUserInterfaceElements();
             }
 
-            applyKineticPhysicsMatrix() {
-                const p = this.player; p.velocity.y -= 0.008; // Continuous gravity vector pull
-                p.velocity.x *= 0.72; p.velocity.z *= 0.72;
+            applyPhysicalKineticCollisions() {
+                const p = this.player; p.velocity.y -= 0.0075;
+                p.velocity.x = Math.max(-0.25, Math.min(0.25, p.velocity.x));
+                p.velocity.z = Math.max(-0.25, Math.min(0.25, p.velocity.z));
 
                 p.position.x += p.velocity.x; this.processAxisSeparation('x');
                 p.position.z += p.velocity.z; this.processAxisSeparation('z');
@@ -482,23 +587,57 @@
                 }
             }
 
+            toggleSkillTree(openState) {
+                this.isSkillTreeOpen = openState;
+                const overlay = document.getElementById('skillTreeOverlay');
+                if (openState) {
+                    document.exitPointerLock(); overlay.style.display = 'flex'; this.refreshSkillTreeUI();
+                } else {
+                    overlay.style.display = 'none'; document.getElementById('canvas3d').requestPointerLock();
+                }
+            }
+
+            refreshSkillTreeUI() {
+                const skills = this.playerProgression.skills;
+                for (let key in skills) {
+                    const node = document.getElementById(`node-${key}`);
+                    const rankLbl = document.getElementById(`rank-${key}`);
+                    rankLbl.textContent = `Rank: ${skills[key]} / 3`;
+                    
+                    node.className = "skill-node";
+                    if (skills[key] === 3) node.classList.add('maxed');
+                    else if (skills[key] > 0) node.classList.add('unlocked');
+                }
+            }
+
+            updateUserInterfaceElements() {
+                const prog = this.playerProgression;
+                document.getElementById('lbl-lvl').textContent = prog.level;
+                document.getElementById('lbl-xp-text').textContent = `${prog.xp} / ${prog.xpNeeded} XP`;
+                document.getElementById('bar-xp').style.width = `${(prog.xp / prog.xpNeeded)*100}%`;
+                document.getElementById('lbl-mana-text').textContent = `${Math.floor(prog.mana)} / ${prog.maxMana}`;
+                document.getElementById('bar-mana').style.width = `${(prog.mana / prog.maxMana)*100}%`;
+                document.getElementById('lbl-points').textContent = prog.skillPoints;
+            }
+
             setActiveSlot(idx) {
                 this.activeSlotIndex = idx;
                 document.querySelectorAll('.hotbar-slot').forEach((s, i) => s.classList.toggle('active', i === idx));
             }
 
-            bindHardwareInterfaces() {
+            bindInputInterfaces() {
                 document.addEventListener('pointerlockchange', () => {
-                    document.getElementById('instructionsOverlay').style.opacity = (document.pointerLockElement === document.getElementById('canvas3d')) ? '0' : '1';
-                    document.getElementById('instructionsOverlay').style.pointerEvents = (document.pointerLockElement === document.getElementById('canvas3d')) ? 'none' : 'all';
+                    const lock = document.pointerLockElement === document.getElementById('canvas3d');
+                    document.getElementById('instructionsOverlay').style.display = (lock || this.isSkillTreeOpen) ? 'none' : 'flex';
                 });
 
                 window.addEventListener('keydown', e => {
                     const p = this.player;
                     if (e.code === 'KeyW') p.moveForward = true; if (e.code === 'KeyS') p.moveBackward = true;
                     if (e.code === 'KeyA') p.moveLeft = true;    if (e.code === 'KeyD') p.moveRight = true;
-                    if (e.code === 'Space' && p.canJump) { p.velocity.y = 0.165; p.canJump = false; }
+                    if (e.code === 'Space' && p.canJump) { p.velocity.y = 0.16; p.canJump = false; }
                     if (e.key >= '1' && e.key <= '4') this.setActiveSlot(parseInt(e.key) - 1);
+                    if (e.code === 'KeyE') this.toggleSkillTree(!this.isSkillTreeOpen);
                 });
 
                 window.addEventListener('keyup', e => {
@@ -516,8 +655,8 @@
                 document.addEventListener('mousedown', e => {
                     if (document.pointerLockElement !== document.getElementById('canvas3d')) return;
                     e.preventDefault();
-                    if (e.button === 0) this.castActiveSpell();
-                    if (e.button === 2) this.transmuteTargetBlockLocal();
+                    if (e.button === 0) this.executePrimaryAction();
+                    if (e.button === 2) this.executeSecondaryAction();
                 });
                 window.addEventListener('contextmenu', e => e.preventDefault());
             }
@@ -526,8 +665,8 @@
 
             pushSystemLog(msg) {
                 const el = document.createElement('div'); el.className = 'log-msg'; el.textContent = msg;
-                const c = document.getElementById('logContainer'); c.appendChild(el);
-                if (c.children.length > 5) c.removeChild(c.firstChild);
+                const container = document.getElementById('logContainer'); container.appendChild(el);
+                if (container.children.length > 5) container.removeChild(container.firstChild);
                 setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 4000);
             }
 
@@ -536,46 +675,40 @@
                 const p = this.player;
 
                 if (document.pointerLockElement === document.getElementById('canvas3d')) {
+                    p.velocity.x *= 0.7; p.velocity.z *= 0.7;
                     let moveVec = new THREE.Vector3();
                     if (p.moveForward) moveVec.z -= 1; if (p.moveBackward) moveVec.z += 1;
                     if (p.moveLeft) moveVec.x -= 1;    if (p.moveRight) moveVec.x += 1;
-                    moveVec.normalize();
-                    moveVec.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), p.rotation.y));
+                    moveVec.normalize().applyQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), p.rotation.y));
 
-                    const currentMoveSpeed = 0.055;
-                    p.velocity.x += moveVec.x * currentMoveSpeed; p.velocity.z += moveVec.z * currentMoveSpeed;
+                    const travelForce = 0.05;
+                    p.velocity.x += moveVec.x * travelForce; p.velocity.z += moveVec.z * travelForce;
 
-                    this.applyKineticPhysicsMatrix();
-                    this.synchronizeWorldMap();
+                    this.applyPhysicalKineticCollisions();
+                    this.synchronizeChunkGrid();
 
-                    // Calculate procedural camera head bob vectors during movement
-                    if (p.moveForward || p.moveBackward || p.moveLeft || p.moveRight) {
-                        this.bobTimer += 0.14;
-                    }
+                    if (p.moveForward || p.moveBackward || p.moveLeft || p.moveRight) this.cameraFX.bob += 0.15;
                 }
 
-                // Construct complete cinematic transform tree for camera tracking
+                // Render execution transforms
                 this.camera.position.copy(p.position);
-                
-                // Add head-bob transformations
-                this.camera.position.y += Math.sin(this.bobTimer) * 0.04;
-                
-                // Overlay camera shake algorithms onto look vector loops
-                if (this.shakeForce > 0.01) {
-                    this.camera.position.x += (Math.random() - 0.5) * this.shakeForce;
-                    this.camera.position.y += (Math.random() - 0.5) * this.shakeForce;
-                    this.shakeForce *= 0.88; // Exponential damping decay equations
+                this.camera.position.y += Math.sin(this.cameraFX.bob) * 0.04;
+
+                if (this.cameraFX.shake > 0.01) {
+                    this.camera.position.x += (Math.random() - 0.5) * this.cameraFX.shake;
+                    this.camera.position.y += (Math.random() - 0.5) * this.cameraFX.shake;
+                    this.cameraFX.shake *= 0.85;
                 }
 
                 this.camera.quaternion.setFromEuler(new THREE.Euler(p.rotation.x, p.rotation.y, 0, 'YXZ'));
                 document.getElementById('ui-pos').textContent = `X: ${Math.floor(p.position.x)}, Y: ${Math.floor(p.position.y)}, Z: ${Math.floor(p.position.z)}`;
                 
-                this.updateProjectilesAndEffects();
+                this.updateProjectilesAndVFX();
                 this.renderer.render(this.scene, this.camera);
             }
         }
 
-        const engine = new AAAMagicEngine();
+        const engine = new ArcaneRPGSandboxEngine();
         engine.loop();
     </script>
 </body>
