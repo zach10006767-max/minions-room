@@ -62,8 +62,13 @@
             min-width: 50px;
         }
 
-        #canvas {
+        #canvasContainer {
             flex: 1;
+            overflow: auto;
+            background: #000;
+        }
+
+        #canvas {
             background: #556b2f;
             display: block;
             image-rendering: pixelated;
@@ -246,28 +251,6 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
-
-        .tile-legend {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px;
-            font-size: 10px;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid #444;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .legend-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 2px;
-        }
     </style>
 </head>
 <body>
@@ -287,6 +270,10 @@
                     <span class="stat-value" id="populationCount">0</span>
                 </div>
                 <div class="stat-item">
+                    <span class="stat-label">ANIMALS:</span>
+                    <span class="stat-value" id="animalCount">0</span>
+                </div>
+                <div class="stat-item">
                     <span class="stat-label">SPEED:</span>
                     <span class="stat-value" id="speedDisplay">1x</span>
                 </div>
@@ -299,7 +286,9 @@
                 <button onclick="game.setGameSpeed(4)">4x</button>
             </div>
         </div>
-        <canvas id="canvas"></canvas>
+        <div id="canvasContainer">
+            <canvas id="canvas"></canvas>
+        </div>
     </div>
 
     <div id="sidebar">
@@ -373,26 +362,24 @@
             harvest(amount) {
                 const harvested = Math.min(amount, this.resourceAmount);
                 this.resourceAmount -= harvested;
-                this.regenerationCounter = 0; // Reset regeneration timer on harvest
+                this.regenerationCounter = 0;
                 return harvested;
             }
 
-            draw(ctx, size) {
-                const x = this.x * size;
-                const y = this.y * size;
-
+            draw(ctx, x, y, size) {
+                // Base terrain
                 switch (this.terrain) {
                     case 'grass':
-                        ctx.fillStyle = '#556b2f';
+                        ctx.fillStyle = '#3d5c2f';
                         break;
                     case 'tree':
-                        ctx.fillStyle = '#228B22';
+                        ctx.fillStyle = '#1b6b1f';
                         break;
                     case 'crop':
-                        ctx.fillStyle = '#FFD700';
+                        ctx.fillStyle = '#8b7500';
                         break;
                     case 'stone':
-                        ctx.fillStyle = '#A9A9A9';
+                        ctx.fillStyle = '#696969';
                         break;
                     default:
                         ctx.fillStyle = '#556b2f';
@@ -401,22 +388,43 @@
                 ctx.fillRect(x, y, size, size);
 
                 // Draw resource indicator
-                if (this.resourceAmount > 0) {
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                    ctx.fillRect(x + 1, y + 1, (this.resourceAmount / this.maxResource) * (size - 2), 3);
+                if (this.terrain === 'tree') {
+                    // Draw tree symbols
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.beginPath();
+                    ctx.arc(x + size / 2, y + size / 2, size / 3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.terrain === 'crop') {
+                    // Draw crop symbols
+                    ctx.fillStyle = '#FFD700';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(x + 2 + i * 5, y + 4, 3, 6);
+                    }
+                } else if (this.terrain === 'stone') {
+                    // Draw stone symbol
+                    ctx.fillStyle = '#A9A9A9';
+                    ctx.fillRect(x + 4, y + 4, 8, 8);
                 }
 
-                // Draw tile border
-                ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                // Resource depletion indicator
+                if (this.resourceAmount < this.maxResource * 0.5 && this.resourceAmount > 0 && this.terrain !== 'grass') {
+                    ctx.strokeStyle = '#FF6B6B';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, size, size);
+                }
+
+                // Tile border
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(x, y, size, size);
             }
         }
 
         class WorldGenerator {
-            constructor(width, height) {
+            constructor(width, height, tileSize) {
                 this.width = width;
                 this.height = height;
+                this.tileSize = tileSize;
                 this.tiles = [];
                 this.generateWorld();
             }
@@ -449,7 +457,7 @@
                     const y = Math.floor(Math.random() * this.height);
                     if (this.getTile(x, y).terrain === 'grass') {
                         this.getTile(x, y).terrain = 'crop';
-                        this.getTile(x, y).resourceAmount = 100; // Start fully mature
+                        this.getTile(x, y).resourceAmount = 100;
                     }
                 }
 
@@ -472,6 +480,12 @@
                 return this.tiles[y][x];
             }
 
+            getTileByCoord(pixelX, pixelY) {
+                const x = Math.floor(pixelX / this.tileSize);
+                const y = Math.floor(pixelY / this.tileSize);
+                return this.getTile(x, y);
+            }
+
             update() {
                 for (let row of this.tiles) {
                     for (let tile of row) {
@@ -480,10 +494,12 @@
                 }
             }
 
-            draw(ctx, tileSize) {
+            draw(ctx) {
                 for (let row of this.tiles) {
                     for (let tile of row) {
-                        tile.draw(ctx, tileSize);
+                        const x = tile.x * this.tileSize;
+                        const y = tile.y * this.tileSize;
+                        tile.draw(ctx, x, y, this.tileSize);
                     }
                 }
             }
@@ -500,14 +516,14 @@
                 this.y = y;
                 this.vx = (Math.random() - 0.5) * 2;
                 this.vy = (Math.random() - 0.5) * 2;
-                this.radius = 8;
+                this.radius = 12;
                 this.health = 50;
                 this.isDead = false;
             }
 
             update() {
                 // Wander randomly
-                if (Math.random() < 0.02) {
+                if (Math.random() < 0.01) {
                     this.vx = (Math.random() - 0.5) * 3;
                     this.vy = (Math.random() - 0.5) * 3;
                 }
@@ -523,23 +539,44 @@
             }
 
             draw(ctx) {
+                // Body
                 ctx.fillStyle = '#8B4513';
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                 ctx.fill();
 
+                // Head
+                ctx.fillStyle = '#A0522D';
+                ctx.beginPath();
+                ctx.arc(this.x - 8, this.y - 8, 8, 0, Math.PI * 2);
+                ctx.fill();
+
                 // Ears
                 ctx.fillStyle = '#654321';
                 ctx.beginPath();
-                ctx.arc(this.x - 5, this.y - 8, 3, 0, Math.PI * 2);
+                ctx.arc(this.x - 12, this.y - 14, 3, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.beginPath();
-                ctx.arc(this.x + 5, this.y - 8, 3, 0, Math.PI * 2);
+                ctx.arc(this.x - 4, this.y - 14, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eyes
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(this.x - 10, this.y - 10, 2, 0, Math.PI * 2);
                 ctx.fill();
 
                 // Health bar
-                ctx.fillStyle = '#e74c3c';
-                ctx.fillRect(this.x - 12, this.y - 18, (this.health / 50) * 24, 3);
+                ctx.fillStyle = '#333';
+                ctx.fillRect(this.x - 15, this.y - 28, 30, 3);
+                ctx.fillStyle = this.health > 35 ? '#00FF00' : this.health > 20 ? '#FFAA00' : '#FF0000';
+                ctx.fillRect(this.x - 15, this.y - 28, (this.health / 50) * 30, 3);
+
+                // Label
+                ctx.fillStyle = '#FFF';
+                ctx.font = 'bold 8px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('🦌', this.x, this.y + 22);
             }
         }
 
@@ -548,7 +585,7 @@
         // ============================================
 
         class GameEngine {
-            constructor() {
+            constructor(tileSize) {
                 this.tickCount = 0;
                 this.dayCount = 0;
                 this.isPaused = false;
@@ -556,10 +593,10 @@
                 this.selectedMinionId = null;
                 
                 // World generation
-                this.mapWidth = 30;
-                this.mapHeight = 25;
-                this.world = new WorldGenerator(this.mapWidth, this.mapHeight);
-                this.tileSize = 25;
+                this.mapWidth = 16;
+                this.mapHeight = 12;
+                this.tileSize = tileSize;
+                this.world = new WorldGenerator(this.mapWidth, this.mapHeight, tileSize);
                 
                 // Entities
                 this.minions = [];
@@ -586,15 +623,15 @@
                 // Spawn initial animals
                 this.spawnWildAnimals();
                 
-                this.addLog('🌍 World generated. Settlement initializing...', 'success');
+                this.addLog('🌍 World generated. Trees 🌳, Crops 🌾, and Stone visible!', 'success');
             }
 
             spawnWildAnimals() {
-                const animalCount = 3 + Math.floor(Math.random() * 3);
+                const animalCount = 4;
                 for (let i = 0; i < animalCount; i++) {
                     const animal = new WildAnimal(
-                        Math.random() * 600 + 100,
-                        Math.random() * 400 + 100,
+                        Math.random() * 800 + 200,
+                        Math.random() * 400 + 150,
                         this.animalIdCounter++
                     );
                     this.animals.push(animal);
@@ -672,8 +709,10 @@
                         for (let row of this.world.tiles) {
                             for (let tile of row) {
                                 if (tile.terrain === 'crop' && tile.resourceAmount > 0) {
-                                    const dx = tile.x * this.tileSize - minion.x;
-                                    const dy = tile.y * this.tileSize - minion.y;
+                                    const tilePixelX = tile.x * this.tileSize + this.tileSize / 2;
+                                    const tilePixelY = tile.y * this.tileSize + this.tileSize / 2;
+                                    const dx = tilePixelX - minion.x;
+                                    const dy = tilePixelY - minion.y;
                                     const dist = Math.sqrt(dx * dx + dy * dy);
                                     if (dist < nearestDist) {
                                         nearestDist = dist;
@@ -683,7 +722,7 @@
                             }
                         }
 
-                        if (nearestCrop && nearestDist < 100) {
+                        if (nearestCrop && nearestDist < 150) {
                             minion.currentTask = 'harvesting';
                             const harvested = nearestCrop.harvest(15);
                             this.resources.food += harvested;
@@ -699,8 +738,10 @@
                         for (let row of this.world.tiles) {
                             for (let tile of row) {
                                 if (tile.terrain === 'tree' && tile.resourceAmount > 0) {
-                                    const dx = tile.x * this.tileSize - minion.x;
-                                    const dy = tile.y * this.tileSize - minion.y;
+                                    const tilePixelX = tile.x * this.tileSize + this.tileSize / 2;
+                                    const tilePixelY = tile.y * this.tileSize + this.tileSize / 2;
+                                    const dx = tilePixelX - minion.x;
+                                    const dy = tilePixelY - minion.y;
                                     const dist = Math.sqrt(dx * dx + dy * dy);
                                     if (dist < nearestDist) {
                                         nearestDist = dist;
@@ -710,7 +751,7 @@
                             }
                         }
 
-                        if (nearestTree && nearestDist < 150) {
+                        if (nearestTree && nearestDist < 200) {
                             minion.currentTask = 'gathering';
                             const harvested = nearestTree.harvest(10);
                             this.resources.wood += harvested;
@@ -755,7 +796,7 @@
 
             tryBuildHouse() {
                 if (this.resources.wood < 50 || this.resources.stone < 50) return;
-                if (this.buildings.length >= 12) return;
+                if (this.buildings.length >= 8) return;
 
                 const x = Math.floor(Math.random() * (this.mapWidth - 3)) + 2;
                 const y = Math.floor(Math.random() * (this.mapHeight - 3)) + 2;
@@ -808,6 +849,7 @@
                 document.getElementById('dayCounter').textContent = this.dayCount;
                 document.getElementById('tickCounter').textContent = this.tickCount;
                 document.getElementById('populationCount').textContent = this.minions.length;
+                document.getElementById('animalCount').textContent = this.animals.length;
 
                 document.getElementById('inv-food').textContent = this.resources.food;
                 document.getElementById('inv-wood').textContent = this.resources.wood;
@@ -939,12 +981,11 @@
                 this.x += this.vx;
                 this.y += this.vy;
 
-                const canvasWidth = canvas.width;
-                const canvasHeight = canvas.height;
+                // Boundary wrapping for larger canvas
                 if (this.x < 10) this.x = 10;
-                if (this.x > canvasWidth - 10) this.x = canvasWidth - 10;
+                if (this.x > 400 - 10) this.x = 400 - 10;
                 if (this.y < 10) this.y = 10;
-                if (this.y > canvasHeight - 10) this.y = canvasHeight - 10;
+                if (this.y > 300 - 10) this.y = 300 - 10;
             }
 
             draw(ctx, selected) {
@@ -955,10 +996,10 @@
 
                 ctx.fillStyle = '#000';
                 ctx.beginPath();
-                ctx.arc(this.x - 4, this.y - 2, 1.5, 0, Math.PI * 2);
+                ctx.arc(this.x - 4, this.y - 2, 2, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.beginPath();
-                ctx.arc(this.x + 4, this.y - 2, 1.5, 0, Math.PI * 2);
+                ctx.arc(this.x + 4, this.y - 2, 2, 0, Math.PI * 2);
                 ctx.fill();
 
                 ctx.strokeStyle = '#000';
@@ -1057,19 +1098,27 @@
         // ============================================
 
         class Renderer {
-            constructor(canvasElement) {
+            constructor(canvasElement, tileSize) {
                 this.canvas = canvasElement;
                 this.ctx = this.canvas.getContext('2d');
-                this.canvas.width = window.innerWidth - 420;
-                this.canvas.height = window.innerHeight - 60;
+                this.tileSize = tileSize;
+                this.zoom = 1;
+                this.cameraX = 0;
+                this.cameraY = 0;
             }
 
             render(game) {
+                const width = game.mapWidth * this.tileSize;
+                const height = game.mapHeight * this.tileSize;
+                
+                this.canvas.width = width;
+                this.canvas.height = height;
+
                 this.ctx.fillStyle = '#556b2f';
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.fillRect(0, 0, width, height);
 
                 // Draw world tiles
-                game.world.draw(this.ctx, game.tileSize);
+                game.world.draw(this.ctx);
 
                 // Draw buildings
                 game.buildings.forEach(building => building.draw(this.ctx));
@@ -1083,12 +1132,10 @@
                     minion.draw(this.ctx, isSelected);
                 });
 
-                // Draw debug info
+                // Draw stats on canvas
                 this.ctx.fillStyle = '#000';
                 this.ctx.font = 'bold 12px monospace';
                 this.ctx.fillText(`Paused: ${game.isPaused}`, 10, 20);
-                this.ctx.font = '10px monospace';
-                this.ctx.fillText(`Minions: ${game.minions.length} | Animals: ${game.animals.length}`, 10, 35);
             }
         }
 
@@ -1096,17 +1143,18 @@
         // MAIN GAME LOOP
         // ============================================
 
+        const TILE_SIZE = 50;
         const canvas = document.getElementById('canvas');
-        const game = new GameEngine();
-        const renderer = new Renderer(canvas);
+        const game = new GameEngine(TILE_SIZE);
+        const renderer = new Renderer(canvas, TILE_SIZE);
 
         // Spawn initial minions in safe zone (center)
-        const centerX = (game.mapWidth / 2) * game.tileSize;
-        const centerY = (game.mapHeight / 2) * game.tileSize;
+        const centerX = (game.mapWidth / 2) * TILE_SIZE;
+        const centerY = (game.mapHeight / 2) * TILE_SIZE;
         for (let i = 0; i < 6; i++) {
             const minion = new Minion(
-                centerX + (Math.random() - 0.5) * 80,
-                centerY + (Math.random() - 0.5) * 80,
+                centerX + (Math.random() - 0.5) * 100,
+                centerY + (Math.random() - 0.5) * 100,
                 game.minionIdCounter++
             );
             game.minions.push(minion);
@@ -1143,8 +1191,7 @@
         });
 
         window.addEventListener('resize', () => {
-            renderer.canvas.width = window.innerWidth - 420;
-            renderer.canvas.height = window.innerHeight - 60;
+            // Canvas will resize dynamically
         });
     </script>
 </body>
