@@ -64,7 +64,7 @@
 
         #canvas {
             flex: 1;
-            background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 100%);
+            background: #556b2f;
             display: block;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
@@ -246,6 +246,28 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
+
+        .tile-legend {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            font-size: 10px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #444;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body>
@@ -324,7 +346,205 @@
 
     <script>
         // ============================================
-        // GLOBAL GAME ENGINE
+        // WORLD GENERATION & INITIALIZATION MODULE
+        // ============================================
+
+        class WorldTile {
+            constructor(x, y, terrain) {
+                this.x = x;
+                this.y = y;
+                this.terrain = terrain; // 'grass', 'tree', 'crop', 'stone'
+                this.resourceAmount = 0;
+                this.maxResource = 100;
+                this.regenerationCounter = 0;
+                this.regenerationRate = 150; // Ticks to fully regenerate
+            }
+
+            update() {
+                if (this.resourceAmount < this.maxResource && this.terrain !== 'grass') {
+                    this.regenerationCounter++;
+                    if (this.regenerationCounter >= this.regenerationRate) {
+                        this.resourceAmount = Math.min(this.maxResource, this.resourceAmount + 10);
+                        this.regenerationCounter = 0;
+                    }
+                }
+            }
+
+            harvest(amount) {
+                const harvested = Math.min(amount, this.resourceAmount);
+                this.resourceAmount -= harvested;
+                this.regenerationCounter = 0; // Reset regeneration timer on harvest
+                return harvested;
+            }
+
+            draw(ctx, size) {
+                const x = this.x * size;
+                const y = this.y * size;
+
+                switch (this.terrain) {
+                    case 'grass':
+                        ctx.fillStyle = '#556b2f';
+                        break;
+                    case 'tree':
+                        ctx.fillStyle = '#228B22';
+                        break;
+                    case 'crop':
+                        ctx.fillStyle = '#FFD700';
+                        break;
+                    case 'stone':
+                        ctx.fillStyle = '#A9A9A9';
+                        break;
+                    default:
+                        ctx.fillStyle = '#556b2f';
+                }
+
+                ctx.fillRect(x, y, size, size);
+
+                // Draw resource indicator
+                if (this.resourceAmount > 0) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.fillRect(x + 1, y + 1, (this.resourceAmount / this.maxResource) * (size - 2), 3);
+                }
+
+                // Draw tile border
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, y, size, size);
+            }
+        }
+
+        class WorldGenerator {
+            constructor(width, height) {
+                this.width = width;
+                this.height = height;
+                this.tiles = [];
+                this.generateWorld();
+            }
+
+            generateWorld() {
+                // Initialize all tiles as grass
+                for (let y = 0; y < this.height; y++) {
+                    const row = [];
+                    for (let x = 0; x < this.width; x++) {
+                        row.push(new WorldTile(x, y, 'grass'));
+                    }
+                    this.tiles.push(row);
+                }
+
+                // Spawn trees (15% of map)
+                const treeCount = Math.floor((this.width * this.height * 0.15));
+                for (let i = 0; i < treeCount; i++) {
+                    const x = Math.floor(Math.random() * this.width);
+                    const y = Math.floor(Math.random() * this.height);
+                    if (this.getTile(x, y).terrain === 'grass') {
+                        this.getTile(x, y).terrain = 'tree';
+                        this.getTile(x, y).resourceAmount = 100;
+                    }
+                }
+
+                // Spawn wild crops/berries (10% of map)
+                const cropCount = Math.floor((this.width * this.height * 0.10));
+                for (let i = 0; i < cropCount; i++) {
+                    const x = Math.floor(Math.random() * this.width);
+                    const y = Math.floor(Math.random() * this.height);
+                    if (this.getTile(x, y).terrain === 'grass') {
+                        this.getTile(x, y).terrain = 'crop';
+                        this.getTile(x, y).resourceAmount = 100; // Start fully mature
+                    }
+                }
+
+                // Spawn stone nodes (5% of map)
+                const stoneCount = Math.floor((this.width * this.height * 0.05));
+                for (let i = 0; i < stoneCount; i++) {
+                    const x = Math.floor(Math.random() * this.width);
+                    const y = Math.floor(Math.random() * this.height);
+                    if (this.getTile(x, y).terrain === 'grass') {
+                        this.getTile(x, y).terrain = 'stone';
+                        this.getTile(x, y).resourceAmount = 80;
+                    }
+                }
+            }
+
+            getTile(x, y) {
+                if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+                    return null;
+                }
+                return this.tiles[y][x];
+            }
+
+            update() {
+                for (let row of this.tiles) {
+                    for (let tile of row) {
+                        tile.update();
+                    }
+                }
+            }
+
+            draw(ctx, tileSize) {
+                for (let row of this.tiles) {
+                    for (let tile of row) {
+                        tile.draw(ctx, tileSize);
+                    }
+                }
+            }
+        }
+
+        // ============================================
+        // ANIMAL ENTITY
+        // ============================================
+
+        class WildAnimal {
+            constructor(x, y, id) {
+                this.id = id;
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.radius = 8;
+                this.health = 50;
+                this.isDead = false;
+            }
+
+            update() {
+                // Wander randomly
+                if (Math.random() < 0.02) {
+                    this.vx = (Math.random() - 0.5) * 3;
+                    this.vy = (Math.random() - 0.5) * 3;
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Boundary wrapping
+                if (this.x < 0) this.x = 800;
+                if (this.x > 800) this.x = 0;
+                if (this.y < 0) this.y = 600;
+                if (this.y > 600) this.y = 0;
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = '#8B4513';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Ears
+                ctx.fillStyle = '#654321';
+                ctx.beginPath();
+                ctx.arc(this.x - 5, this.y - 8, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(this.x + 5, this.y - 8, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Health bar
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(this.x - 12, this.y - 18, (this.health / 50) * 24, 3);
+            }
+        }
+
+        // ============================================
+        // GAME ENGINE
         // ============================================
 
         class GameEngine {
@@ -335,60 +555,51 @@
                 this.gameSpeed = 1;
                 this.selectedMinionId = null;
                 
-                // World state
+                // World generation
+                this.mapWidth = 30;
+                this.mapHeight = 25;
+                this.world = new WorldGenerator(this.mapWidth, this.mapHeight);
+                this.tileSize = 25;
+                
+                // Entities
                 this.minions = [];
                 this.minionIdCounter = 0;
+                this.animals = [];
+                this.animalIdCounter = 0;
                 this.buildings = [];
                 this.buildingIdCounter = 0;
+                
+                // Resources
                 this.resources = {
-                    food: 100,
-                    wood: 50,
+                    food: 200,
+                    wood: 100,
                     stone: 50,
-                    gold: 20
+                    gold: 10
                 };
                 this.beds = 10;
                 
-                // World map
-                this.mapWidth = 40;
-                this.mapHeight = 30;
-                this.worldMap = [];
-                this.initializeWorldMap();
-                
                 // Game state
                 this.gameLog = [];
-                this.tradeLog = [];
                 this.lastTradeCaravan = 0;
-                this.caravanArrivalInterval = 200; // Every 200 ticks
+                this.caravanArrivalInterval = 200;
+                
+                // Spawn initial animals
+                this.spawnWildAnimals();
+                
+                this.addLog('🌍 World generated. Settlement initializing...', 'success');
             }
 
-            initializeWorldMap() {
-                this.worldMap = [];
-                for (let y = 0; y < this.mapHeight; y++) {
-                    const row = [];
-                    for (let x = 0; x < this.mapWidth; x++) {
-                        const rand = Math.random();
-                        let terrain = 'grass';
-                        if (rand < 0.1) terrain = 'forest';
-                        if (rand < 0.05) terrain = 'stone';
-                        row.push({ terrain, resourceNode: null });
-                    }
-                    this.worldMap.push(row);
+            spawnWildAnimals() {
+                const animalCount = 3 + Math.floor(Math.random() * 3);
+                for (let i = 0; i < animalCount; i++) {
+                    const animal = new WildAnimal(
+                        Math.random() * 600 + 100,
+                        Math.random() * 400 + 100,
+                        this.animalIdCounter++
+                    );
+                    this.animals.push(animal);
                 }
-                this.addInitialResources();
-            }
-
-            addInitialResources() {
-                // Scatter resource nodes
-                for (let i = 0; i < 5; i++) {
-                    const x = Math.floor(Math.random() * this.mapWidth);
-                    const y = Math.floor(Math.random() * this.mapHeight);
-                    this.worldMap[y][x].resourceNode = { type: 'wood', amount: 50 };
-                }
-                for (let i = 0; i < 3; i++) {
-                    const x = Math.floor(Math.random() * this.mapWidth);
-                    const y = Math.floor(Math.random() * this.mapHeight);
-                    this.worldMap[y][x].resourceNode = { type: 'stone', amount: 40 };
-                }
+                this.addLog(`🦌 ${animalCount} wild animals roaming the lands`, 'info');
             }
 
             togglePause() {
@@ -408,6 +619,12 @@
                     this.dayCount++;
                 }
 
+                // Update world tiles (regeneration)
+                this.world.update();
+
+                // Update animals
+                this.animals.forEach(animal => animal.update());
+
                 // Update minions
                 for (let i = this.minions.length - 1; i >= 0; i--) {
                     this.minions[i].update(this);
@@ -417,23 +634,22 @@
                     }
                 }
 
-                // Auto-spawn minions occasionally
-                if (this.tickCount % 300 === 0 && this.minions.length < 20) {
-                    // Check if we can birth new minions
+                // Reproduction attempts
+                if (this.tickCount % 300 === 0) {
                     this.attemptReproduction();
                 }
 
-                // Update buildings
+                // Building updates
                 this.buildings.forEach(b => b.update(this));
 
-                // Auto-build houses when resources allow
+                // Auto-build houses
                 if (this.tickCount % 30 === 0) {
                     this.tryBuildHouse();
                 }
 
-                // Minion foraging and hunting
-                if (this.tickCount % 15 === 0) {
-                    this.updateForagingHunting();
+                // Minion resource harvesting
+                if (this.tickCount % 10 === 0) {
+                    this.updateResourceHarvesting();
                 }
 
                 // Trade caravan
@@ -442,31 +658,88 @@
                     this.lastTradeCaravan = this.tickCount;
                 }
 
-                // Update UI
                 this.updateUI();
+            }
+
+            updateResourceHarvesting() {
+                for (let minion of this.minions) {
+                    // Prioritize harvesting if hungry
+                    if (minion.hunger > 60) {
+                        // Find nearest crop tile
+                        let nearestCrop = null;
+                        let nearestDist = Infinity;
+
+                        for (let row of this.world.tiles) {
+                            for (let tile of row) {
+                                if (tile.terrain === 'crop' && tile.resourceAmount > 0) {
+                                    const dx = tile.x * this.tileSize - minion.x;
+                                    const dy = tile.y * this.tileSize - minion.y;
+                                    const dist = Math.sqrt(dx * dx + dy * dy);
+                                    if (dist < nearestDist) {
+                                        nearestDist = dist;
+                                        nearestCrop = tile;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (nearestCrop && nearestDist < 100) {
+                            minion.currentTask = 'harvesting';
+                            const harvested = nearestCrop.harvest(15);
+                            this.resources.food += harvested;
+                            minion.hunger = Math.max(0, minion.hunger - harvested * 0.5);
+                        }
+                    }
+
+                    // Harvest wood if wood is low
+                    if (this.resources.wood < 100 && minion.energy > 40) {
+                        let nearestTree = null;
+                        let nearestDist = Infinity;
+
+                        for (let row of this.world.tiles) {
+                            for (let tile of row) {
+                                if (tile.terrain === 'tree' && tile.resourceAmount > 0) {
+                                    const dx = tile.x * this.tileSize - minion.x;
+                                    const dy = tile.y * this.tileSize - minion.y;
+                                    const dist = Math.sqrt(dx * dx + dy * dy);
+                                    if (dist < nearestDist) {
+                                        nearestDist = dist;
+                                        nearestTree = tile;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (nearestTree && nearestDist < 150) {
+                            minion.currentTask = 'gathering';
+                            const harvested = nearestTree.harvest(10);
+                            this.resources.wood += harvested;
+                            minion.energy = Math.max(0, minion.energy - harvested * 0.3);
+                        }
+                    }
+                }
             }
 
             attemptReproduction() {
                 if (this.minions.length < 2) return;
 
                 for (let i = 0; i < this.minions.length; i++) {
-                    if (this.minions[i].age < 20) continue; // Too young
+                    if (this.minions[i].age < 20) continue;
                     if (this.minions[i].libido < 70) continue;
 
                     for (let j = i + 1; j < this.minions.length; j++) {
                         if (this.minions[j].age < 20) continue;
                         if (this.minions[j].libido < 70) continue;
-                        if (this.minions[i].sex === this.minions[j].sex) continue; // Different sex
+                        if (this.minions[i].sex === this.minions[j].sex) continue;
 
                         const dx = this.minions[i].x - this.minions[j].x;
                         const dy = this.minions[i].y - this.minions[j].y;
                         const dist = Math.sqrt(dx * dx + dy * dy);
 
-                        if (dist < 30) {
-                            // Birth!
+                        if (dist < 50) {
                             const newMinion = new Minion(
-                                this.minions[i].x + Math.random() * 10 - 5,
-                                this.minions[i].y + Math.random() * 10 - 5,
+                                this.minions[i].x + Math.random() * 20 - 10,
+                                this.minions[i].y + Math.random() * 20 - 10,
                                 this.minionIdCounter++
                             );
                             newMinion.age = 0;
@@ -482,12 +755,12 @@
 
             tryBuildHouse() {
                 if (this.resources.wood < 50 || this.resources.stone < 50) return;
-                if (this.buildings.length >= 15) return; // Max houses
+                if (this.buildings.length >= 12) return;
 
-                const x = Math.floor(Math.random() * (this.mapWidth - 5)) + 2;
-                const y = Math.floor(Math.random() * (this.mapHeight - 5)) + 2;
+                const x = Math.floor(Math.random() * (this.mapWidth - 3)) + 2;
+                const y = Math.floor(Math.random() * (this.mapHeight - 3)) + 2;
 
-                const building = new Building(x, y, 'house', this.buildingIdCounter++);
+                const building = new Building(x * this.tileSize, y * this.tileSize, 'house', this.buildingIdCounter++);
                 this.buildings.push(building);
 
                 this.resources.wood -= 50;
@@ -496,59 +769,31 @@
                 this.addLog(`🏠 New house blueprint at (${x}, ${y})`, 'success');
             }
 
-            updateForagingHunting() {
-                for (let minion of this.minions) {
-                    if (minion.hunger > 60) {
-                        // Look for food sources
-                        for (let y = Math.max(0, minion.gridY - 5); y < Math.min(this.mapHeight, minion.gridY + 5); y++) {
-                            for (let x = Math.max(0, minion.gridX - 5); x < Math.min(this.mapWidth, minion.gridX + 5); x++) {
-                                if (this.worldMap[y][x].resourceNode && this.worldMap[y][x].resourceNode.type === 'wood') {
-                                    const node = this.worldMap[y][x].resourceNode;
-                                    const harvested = Math.min(10, node.amount);
-                                    this.resources.wood += harvested;
-                                    node.amount -= harvested;
-                                    minion.hunger = Math.max(0, minion.hunger - 15);
-                                    if (node.amount <= 0) {
-                                        this.worldMap[y][x].resourceNode = null;
-                                    }
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             tradeWithCaravan() {
-                let tradeLog = [];
+                let trades = [];
                 
-                // Sell surplus food
                 if (this.resources.food > 500) {
                     const surplus = this.resources.food - 300;
                     const goldEarned = Math.floor(surplus * 0.5);
                     this.resources.food = 300;
                     this.resources.gold += goldEarned;
-                    tradeLog.push(`📊 Sold ${surplus} Food for ${goldEarned} Gold`);
+                    trades.push(`Sold ${surplus} Food`);
                 }
 
-                // Buy wood if low
-                if (this.resources.wood < 50 && this.resources.gold >= 20) {
-                    const goldSpent = 20;
-                    this.resources.gold -= goldSpent;
-                    this.resources.wood += 40;
-                    tradeLog.push(`📊 Bought 40 Wood for ${goldSpent} Gold`);
+                if (this.resources.wood < 80 && this.resources.gold >= 20) {
+                    this.resources.gold -= 20;
+                    this.resources.wood += 60;
+                    trades.push(`Bought 60 Wood`);
                 }
 
-                // Buy stone if low
-                if (this.resources.stone < 50 && this.resources.gold >= 15) {
-                    const goldSpent = 15;
-                    this.resources.gold -= goldSpent;
-                    this.resources.stone += 30;
-                    tradeLog.push(`📊 Bought 30 Stone for ${goldSpent} Gold`);
+                if (this.resources.stone < 80 && this.resources.gold >= 15) {
+                    this.resources.gold -= 15;
+                    this.resources.stone += 50;
+                    trades.push(`Bought 50 Stone`);
                 }
 
-                if (tradeLog.length > 0) {
-                    this.addLog(`🛒 Caravan arrived: ${tradeLog.join('; ')}`, 'success');
+                if (trades.length > 0) {
+                    this.addLog(`🛒 Caravan: ${trades.join('; ')}`, 'success');
                 }
             }
 
@@ -560,12 +805,10 @@
             }
 
             updateUI() {
-                // Top bar
                 document.getElementById('dayCounter').textContent = this.dayCount;
                 document.getElementById('tickCounter').textContent = this.tickCount;
                 document.getElementById('populationCount').textContent = this.minions.length;
 
-                // Inventory
                 document.getElementById('inv-food').textContent = this.resources.food;
                 document.getElementById('inv-wood').textContent = this.resources.wood;
                 document.getElementById('inv-stone').textContent = this.resources.stone;
@@ -573,38 +816,25 @@
                 document.getElementById('inv-beds').textContent = this.beds;
                 document.getElementById('inv-houses').textContent = this.buildings.length;
 
-                // Settlement log
                 const logHtml = this.gameLog.map(entry => 
                     `<div class="log-entry ${entry.type}"><strong>${entry.timestamp}:</strong> ${entry.message}</div>`
                 ).join('');
                 document.getElementById('settlementLog').innerHTML = logHtml || '<div style="opacity: 0.5;">No events yet...</div>';
 
-                // Minion status
-                if (this.selectedMinionId !== null) {
-                    const minion = this.minions.find(m => m.id === this.selectedMinionId);
-                    if (minion) {
-                        document.getElementById('minionStatus').innerHTML = this.getMinionStatusHtml(minion);
-                    } else {
-                        this.selectedMinionId = null;
-                        document.getElementById('minionStatus').innerHTML = '<div style="opacity: 0.5;">Click on canvas to select a minion</div>';
-                    }
+                if (this.minions.length > 0) {
+                    const topMinions = this.minions.slice(0, 3);
+                    document.getElementById('minionStatus').innerHTML = topMinions.map(m => 
+                        this.getMinionStatusHtml(m)
+                    ).join('');
                 } else {
-                    if (this.minions.length > 0) {
-                        const topMinions = this.minions.slice(0, 3);
-                        document.getElementById('minionStatus').innerHTML = topMinions.map(m => 
-                            this.getMinionStatusHtml(m)
-                        ).join('');
-                    } else {
-                        document.getElementById('minionStatus').innerHTML = '<div style="opacity: 0.5;">No minions yet...</div>';
-                    }
+                    document.getElementById('minionStatus').innerHTML = '<div style="opacity: 0.5;">No minions yet...</div>';
                 }
             }
 
             getMinionStatusHtml(minion) {
                 const hungerPercent = (minion.hunger / 100) * 100;
                 const energyPercent = (minion.energy / 100) * 100;
-                const libisoPercent = (minion.libido / 100) * 100;
-                const agePercent = (minion.age / 100) * 100;
+                const libidoPercent = (minion.libido / 100) * 100;
 
                 const hungerClass = minion.hunger > 80 ? 'danger' : minion.hunger > 50 ? 'warning' : 'good';
                 const energyClass = minion.energy < 20 ? 'danger' : minion.energy < 50 ? 'warning' : 'good';
@@ -612,11 +842,6 @@
                 return `
                     <div class="minion-card">
                         <div class="minion-name">${minion.name} ${minion.sex === 'M' ? '♂' : '♀'}</div>
-                        <div class="minion-stat-bar">
-                            <span>AGE:</span>
-                            <div class="stat-bar-fill"><div class="stat-bar-inner good" style="width: ${Math.min(agePercent, 100)}%"></div></div>
-                            <span>${minion.age}</span>
-                        </div>
                         <div class="minion-stat-bar">
                             <span>HUNGER:</span>
                             <div class="stat-bar-fill"><div class="stat-bar-inner ${hungerClass}" style="width: ${hungerPercent}%"></div></div>
@@ -629,7 +854,7 @@
                         </div>
                         <div class="minion-stat-bar">
                             <span>LIBIDO:</span>
-                            <div class="stat-bar-fill"><div class="stat-bar-inner" style="width: ${libisoPercent}%; background: #e91e63;"></div></div>
+                            <div class="stat-bar-fill"><div class="stat-bar-inner" style="width: ${libidoPercent}%; background: #e91e63;"></div></div>
                             <span>${Math.round(minion.libido)}</span>
                         </div>
                         <div style="margin-top: 8px; font-size: 10px; color: #aaa;">
@@ -651,48 +876,35 @@
                 this.sex = Math.random() < 0.5 ? 'M' : 'F';
                 this.age = 20 + Math.random() * 30;
                 
-                // Physics
                 this.x = x;
                 this.y = y;
-                this.gridX = Math.floor(x / 20);
-                this.gridY = Math.floor(y / 20);
                 this.vx = 0;
                 this.vy = 0;
                 
-                // Biology
                 this.hunger = 40 + Math.random() * 30;
                 this.energy = 70 + Math.random() * 30;
                 this.libido = Math.random() * 50;
                 this.isDead = false;
                 
-                // AI State
                 this.currentTask = 'wandering';
                 this.taskTimer = 0;
-                this.targetX = null;
-                this.targetY = null;
             }
 
             generateName() {
-                const names = ['Bob', 'Alice', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 
-                              'Iris', 'Jack', 'Kate', 'Leo', 'Mia', 'Noah', 'Olivia', 'Peter'];
+                const names = ['Bob', 'Alice', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry'];
                 return names[Math.floor(Math.random() * names.length)] + '_' + Math.floor(Math.random() * 1000);
             }
 
             update(engine) {
-                // Age progression
                 this.age += 0.01;
+                this.hunger += 0.12;
+                this.energy -= 0.1;
+                this.libido += 0.03;
 
-                // Stat degradation
-                this.hunger += 0.1;
-                this.energy -= 0.08;
-                this.libido += 0.02;
-
-                // Cap stats
                 this.hunger = Math.min(100, this.hunger);
                 this.energy = Math.max(0, this.energy);
                 this.libido = Math.min(100, this.libido);
 
-                // Death conditions
                 if (this.hunger >= 100) {
                     this.isDead = true;
                     return;
@@ -700,138 +912,76 @@
 
                 if (this.energy <= 0) {
                     this.currentTask = 'sleeping';
-                    this.energy = Math.min(100, this.energy + 0.5);
-                    if (this.energy >= 50) {
+                    this.energy = Math.min(100, this.energy + 1);
+                    if (this.energy >= 60) {
                         this.currentTask = 'wandering';
                     }
                 }
 
-                // State machine
                 if (this.hunger > 80) {
                     this.currentTask = 'eating';
                 } else if (this.energy < 20) {
                     this.currentTask = 'sleeping';
                 } else if (this.currentTask === 'eating' && this.hunger < 40) {
                     this.currentTask = 'wandering';
-                } else if (this.currentTask === 'sleeping' && this.energy > 60) {
-                    this.currentTask = 'wandering';
                 }
 
-                // Movement
                 if (this.currentTask === 'wandering') {
                     if (Math.random() < 0.02) {
-                        this.vx = (Math.random() - 0.5) * 3;
-                        this.vy = (Math.random() - 0.5) * 3;
-                    }
-                } else if (this.currentTask === 'eating') {
-                    // Move towards settlement center (rough approximation)
-                    if (!this.targetX) {
-                        this.targetX = 50;
-                        this.targetY = 50;
-                    }
-                    const dx = this.targetX - this.x;
-                    const dy = this.targetY - this.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < 5) {
-                        this.hunger = Math.max(0, this.hunger - 10);
-                        this.energy = Math.max(0, this.energy - 5);
-                    } else {
-                        this.vx = (dx / dist) * 1.5;
-                        this.vy = (dy / dist) * 1.5;
+                        this.vx = (Math.random() - 0.5) * 2.5;
+                        this.vy = (Math.random() - 0.5) * 2.5;
                     }
                 } else if (this.currentTask === 'sleeping') {
-                    this.vx *= 0.9;
-                    this.vy *= 0.9;
+                    this.vx *= 0.95;
+                    this.vy *= 0.95;
                 }
 
-                // Apply movement
                 this.x += this.vx;
                 this.y += this.vy;
 
-                // Boundary check
                 const canvasWidth = canvas.width;
                 const canvasHeight = canvas.height;
                 if (this.x < 10) this.x = 10;
                 if (this.x > canvasWidth - 10) this.x = canvasWidth - 10;
                 if (this.y < 10) this.y = 10;
                 if (this.y > canvasHeight - 10) this.y = canvasHeight - 10;
-
-                this.gridX = Math.floor(this.x / 20);
-                this.gridY = Math.floor(this.y / 20);
             }
 
             draw(ctx, selected) {
-                // Body
                 ctx.fillStyle = selected ? '#FFD700' : '#FFD93D';
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
+                ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Eyes
                 ctx.fillStyle = '#000';
                 ctx.beginPath();
-                ctx.arc(this.x - 5, this.y - 3, 2, 0, Math.PI * 2);
+                ctx.arc(this.x - 4, this.y - 2, 1.5, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.beginPath();
-                ctx.arc(this.x + 5, this.y - 3, 2, 0, Math.PI * 2);
+                ctx.arc(this.x + 4, this.y - 2, 1.5, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Mouth
                 ctx.strokeStyle = '#000';
-                ctx.lineWidth = 1;
+                ctx.lineWidth = 0.5;
                 ctx.beginPath();
-                ctx.arc(this.x, this.y + 3, 3, 0, Math.PI);
+                ctx.arc(this.x, this.y + 2, 2, 0, Math.PI);
                 ctx.stroke();
 
-                // Arms
-                ctx.strokeStyle = '#FFD93D';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(this.x - 12, this.y);
-                ctx.lineTo(this.x - 20, this.y - 5 + Math.sin(this.age) * 3);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(this.x + 12, this.y);
-                ctx.lineTo(this.x + 20, this.y - 5 + Math.sin(this.age + 0.5) * 3);
-                ctx.stroke();
-
-                // Legs
-                ctx.beginPath();
-                ctx.moveTo(this.x - 6, this.y + 12);
-                ctx.lineTo(this.x - 6, this.y + 20 + Math.sin(this.age) * 2);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(this.x + 6, this.y + 12);
-                ctx.lineTo(this.x + 6, this.y + 20 + Math.sin(this.age + 0.5) * 2);
-                ctx.stroke();
-
-                // Selection circle
                 if (selected) {
                     ctx.strokeStyle = '#FFD700';
                     ctx.lineWidth = 2;
                     ctx.beginPath();
-                    ctx.arc(this.x, this.y, 22, 0, Math.PI * 2);
+                    ctx.arc(this.x, this.y, 18, 0, Math.PI * 2);
                     ctx.stroke();
                 }
 
-                // Health bar
-                const barWidth = 25;
-                const barHeight = 3;
-                const healthPercent = 100 - (this.hunger / 100) * 50 - (this.energy / 100) * 50;
+                const barWidth = 20;
+                const barHeight = 2;
                 ctx.fillStyle = '#333';
-                ctx.fillRect(this.x - barWidth / 2, this.y - 22, barWidth, barHeight);
+                ctx.fillRect(this.x - barWidth / 2, this.y - 16, barWidth, barHeight);
+                const healthPercent = 100 - (this.hunger / 100) * 50 - (this.energy / 100) * 50;
                 ctx.fillStyle = healthPercent > 75 ? '#00FF00' : healthPercent > 50 ? '#FFAA00' : '#FF0000';
-                ctx.fillRect(this.x - barWidth / 2, this.y - 22, (barWidth * healthPercent) / 100, barHeight);
-
-                // Task indicator
-                if (this.currentTask === 'sleeping') {
-                    ctx.fillStyle = '#5555FF';
-                    ctx.fillText('Z', this.x + 15, this.y - 15);
-                } else if (this.currentTask === 'eating') {
-                    ctx.fillStyle = '#FF5555';
-                    ctx.font = '10px Arial';
-                    ctx.fillText('🍖', this.x + 15, this.y - 15);
-                }
+                ctx.fillRect(this.x - barWidth / 2, this.y - 16, (barWidth * healthPercent) / 100, barHeight);
             }
         }
 
@@ -845,8 +995,8 @@
                 this.x = x;
                 this.y = y;
                 this.type = type;
-                this.width = type === 'house' ? 40 : 30;
-                this.height = type === 'house' ? 50 : 30;
+                this.width = 35;
+                this.height = 45;
                 this.health = 100;
                 this.constructionProgress = 0;
                 this.isBuilt = false;
@@ -854,18 +1004,17 @@
 
             update(engine) {
                 if (!this.isBuilt) {
-                    // Check if minions can construct
                     for (let minion of engine.minions) {
                         if (minion.energy > 40 && minion.hunger < 60) {
                             const dx = this.x - minion.x;
                             const dy = this.y - minion.y;
                             const dist = Math.sqrt(dx * dx + dy * dy);
-                            if (dist < 100) {
+                            if (dist < 80) {
                                 minion.currentTask = 'building';
-                                this.constructionProgress += 0.5;
+                                this.constructionProgress += 0.8;
                                 if (this.constructionProgress >= 100) {
                                     this.isBuilt = true;
-                                    engine.addLog(`🏠 House completed at (${this.x}, ${this.y})`, 'success');
+                                    engine.addLog(`🏠 House completed!`, 'success');
                                 }
                                 break;
                             }
@@ -875,31 +1024,28 @@
             }
 
             draw(ctx) {
-                const opacity = this.isBuilt ? 1 : 0.5;
+                const opacity = this.isBuilt ? 1 : 0.6;
                 ctx.globalAlpha = opacity;
 
                 ctx.fillStyle = '#8B4513';
                 ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
 
-                // Roof
                 ctx.fillStyle = '#DC143C';
                 ctx.beginPath();
                 ctx.moveTo(this.x - this.width / 2, this.y - this.height / 2);
-                ctx.lineTo(this.x, this.y - this.height / 2 - 15);
+                ctx.lineTo(this.x, this.y - this.height / 2 - 12);
                 ctx.lineTo(this.x + this.width / 2, this.y - this.height / 2);
                 ctx.fill();
 
-                // Door
                 ctx.fillStyle = '#654321';
-                ctx.fillRect(this.x - 8, this.y, 16, 20);
+                ctx.fillRect(this.x - 7, this.y, 14, 18);
 
-                // Construction progress bar
                 if (!this.isBuilt) {
                     ctx.globalAlpha = 1;
                     ctx.fillStyle = '#333';
-                    ctx.fillRect(this.x - 20, this.y - this.height / 2 - 25, 40, 5);
+                    ctx.fillRect(this.x - 18, this.y - this.height / 2 - 22, 36, 4);
                     ctx.fillStyle = '#FFD700';
-                    ctx.fillRect(this.x - 20, this.y - this.height / 2 - 25, (40 * this.constructionProgress) / 100, 5);
+                    ctx.fillRect(this.x - 18, this.y - this.height / 2 - 22, (36 * this.constructionProgress) / 100, 4);
                 }
 
                 ctx.globalAlpha = 1;
@@ -919,28 +1065,17 @@
             }
 
             render(game) {
-                // Clear canvas
-                this.ctx.fillStyle = 'rgba(135, 206, 235, 1)';
+                this.ctx.fillStyle = '#556b2f';
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-                // Draw grid (optional)
-                this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
-                this.ctx.lineWidth = 1;
-                for (let x = 0; x < this.canvas.width; x += 20) {
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(x, 0);
-                    this.ctx.lineTo(x, this.canvas.height);
-                    this.ctx.stroke();
-                }
-                for (let y = 0; y < this.canvas.height; y += 20) {
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(0, y);
-                    this.ctx.lineTo(this.canvas.width, y);
-                    this.ctx.stroke();
-                }
+                // Draw world tiles
+                game.world.draw(this.ctx, game.tileSize);
 
                 // Draw buildings
                 game.buildings.forEach(building => building.draw(this.ctx));
+
+                // Draw animals
+                game.animals.forEach(animal => animal.draw(this.ctx));
 
                 // Draw minions
                 game.minions.forEach(minion => {
@@ -950,8 +1085,10 @@
 
                 // Draw debug info
                 this.ctx.fillStyle = '#000';
-                this.ctx.font = '12px monospace';
+                this.ctx.font = 'bold 12px monospace';
                 this.ctx.fillText(`Paused: ${game.isPaused}`, 10, 20);
+                this.ctx.font = '10px monospace';
+                this.ctx.fillText(`Minions: ${game.minions.length} | Animals: ${game.animals.length}`, 10, 35);
             }
         }
 
@@ -963,22 +1100,20 @@
         const game = new GameEngine();
         const renderer = new Renderer(canvas);
 
-        // Spawn initial minions
-        for (let i = 0; i < 5; i++) {
+        // Spawn initial minions in safe zone (center)
+        const centerX = (game.mapWidth / 2) * game.tileSize;
+        const centerY = (game.mapHeight / 2) * game.tileSize;
+        for (let i = 0; i < 6; i++) {
             const minion = new Minion(
-                Math.random() * (canvas.width - 100) + 50,
-                Math.random() * (canvas.height - 100) + 50,
+                centerX + (Math.random() - 0.5) * 80,
+                centerY + (Math.random() - 0.5) * 80,
                 game.minionIdCounter++
             );
             game.minions.push(minion);
         }
 
-        // Add initial resources for testing
-        game.resources.food = 300;
-        game.resources.wood = 150;
-        game.resources.stone = 100;
+        game.addLog(`👥 ${game.minions.length} minions spawned in settlement center`, 'success');
 
-        // Game loop
         function gameLoop() {
             for (let i = 0; i < game.gameSpeed; i++) {
                 game.tick();
@@ -989,7 +1124,6 @@
 
         gameLoop();
 
-        // Canvas click handler
         canvas.addEventListener('click', (e) => {
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -998,7 +1132,7 @@
             for (let minion of game.minions) {
                 const dx = minion.x - x;
                 const dy = minion.y - y;
-                if (Math.sqrt(dx * dx + dy * dy) < 25) {
+                if (Math.sqrt(dx * dx + dy * dy) < 20) {
                     game.selectedMinionId = minion.id;
                     game.addLog(`👤 Selected: ${minion.name}`, 'info');
                     return;
@@ -1008,7 +1142,6 @@
             game.selectedMinionId = null;
         });
 
-        // Window resize handler
         window.addEventListener('resize', () => {
             renderer.canvas.width = window.innerWidth - 420;
             renderer.canvas.height = window.innerHeight - 60;
