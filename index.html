@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minions Room Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 1100px;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            font-size: 2.5em;
+        }
+
+        canvas {
+            border: 5px solid white;
+            background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 100%);
+            display: block;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            cursor: crosshair;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .info {
+            color: white;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .controls {
+            margin-top: 15px;
+            color: white;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        button {
+            background: #FF6B6B;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.3s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #FF5252;
+            transform: scale(1.05);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .stats {
+            color: white;
+            margin-top: 10px;
+            font-size: 12px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stats p {
+            margin: 5px;
+        }
+
+        .minion-list {
+            color: white;
+            margin-top: 15px;
+            font-size: 12px;
+            text-align: left;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .minion-list h3 {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .minion-entry {
+            padding: 5px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍌 Minions Room Simulator 🍌</h1>
+        <canvas id="canvas" width="1000" height="600"></canvas>
+        <div class="info">
+            <p>👆 Click on the canvas to add waypoints • Double-click a minion to remove it</p>
+        </div>
+        <div class="controls">
+            <button onclick="addMinion()">➕ Add Minion</button>
+            <button onclick="clearWaypoints()">🗑️ Clear Waypoints</button>
+            <button onclick="resetRoom()">🔄 Reset Room</button>
+            <button onclick="togglePause()">⏸️ Pause/Resume</button>
+        </div>
+        <div class="stats">
+            <p>👥 Minions: <span id="minionCount">0</span></p>
+            <p>📍 Waypoints: <span id="waypointCount">0</span></p>
+            <p>⚡ FPS: <span id="fps">0</span></p>
+        </div>
+        <div class="minion-list">
+            <h3>Active Minions:</h3>
+            <div id="minionDetails"></div>
+        </div>
+    </div>
+
+    <script src="minions.js"></script>
+</body>
+</html>
