@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minions Room Simulator</title>
+    <title>Minions Survival Simulator</title>
     <style>
         * {
             margin: 0;
@@ -12,67 +12,48 @@
         }
 
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
+            background: #2c3e50;
             display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
-        }
-
-        .container {
-            text-align: center;
-            max-width: 1100px;
-        }
-
-        h1 {
-            color: white;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-            font-size: 2.5em;
-        }
-
-        canvas {
-            border: 5px solid white;
-            background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 100%);
-            display: block;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            cursor: crosshair;
-            max-width: 100%;
-            height: auto;
-        }
-
-        .info {
-            color: white;
-            margin-top: 20px;
-            font-size: 14px;
-        }
-
-        .controls {
-            margin-top: 15px;
-            color: white;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
             gap: 10px;
+            padding: 10px;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #34495e;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        #topBar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            background: #2c3e50;
+            padding: 10px;
+            border-radius: 5px;
+            flex-wrap: wrap;
         }
 
         button {
-            background: #FF6B6B;
+            background: #e74c3c;
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 8px 16px;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
-            transition: 0.3s;
             font-weight: bold;
+            font-size: 12px;
+            transition: 0.2s;
         }
 
         button:hover {
-            background: #FF5252;
+            background: #c0392b;
             transform: scale(1.05);
         }
 
@@ -80,358 +61,734 @@
             transform: scale(0.95);
         }
 
-        .stats {
-            color: white;
-            margin-top: 10px;
-            font-size: 12px;
+        .controls {
             display: flex;
-            justify-content: center;
-            gap: 30px;
-            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
         }
 
-        .stats p {
-            margin: 5px;
+        .controls input {
+            width: 100px;
         }
 
-        .minion-list {
-            color: white;
-            margin-top: 15px;
-            font-size: 12px;
-            text-align: left;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 15px;
+        canvas {
+            flex: 1;
+            background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 100%);
+            border: 3px solid #fff;
+            border-radius: 5px;
+            cursor: crosshair;
+        }
+
+        #sidebar {
+            width: 300px;
+            background: #2c3e50;
+            border: 2px solid #fff;
             border-radius: 8px;
-            max-height: 200px;
+            padding: 15px;
             overflow-y: auto;
+            color: white;
+            display: flex;
+            flex-direction: column;
         }
 
-        .minion-list h3 {
-            margin-bottom: 10px;
-            text-align: center;
+        #sidebar h2 {
+            margin-bottom: 15px;
+            color: #f39c12;
+            border-bottom: 2px solid #f39c12;
+            padding-bottom: 10px;
         }
 
-        .minion-entry {
-            padding: 5px;
-            margin: 5px 0;
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 12px;
             background: rgba(255, 255, 255, 0.1);
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .minion-info {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 4px;
+            border-left: 3px solid #f39c12;
+            font-size: 11px;
+        }
+
+        .minion-info h3 {
+            color: #f39c12;
+            margin-bottom: 5px;
+        }
+
+        .minion-stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+        }
+
+        .status {
+            padding: 5px 10px;
+            background: rgba(52, 152, 219, 0.3);
+            border-radius: 3px;
+            margin: 5px 0;
+            font-size: 11px;
+        }
+
+        .build-menu {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+            font-size: 12px;
+            border: 2px solid #f39c12;
+        }
+
+        .build-option {
+            padding: 5px;
+            cursor: pointer;
+            margin: 3px 0;
+            background: #34495e;
+            border-radius: 3px;
+            transition: 0.2s;
+        }
+
+        .build-option:hover {
+            background: #f39c12;
+            color: black;
+        }
+
+        .chat-bubble {
+            position: absolute;
+            background: white;
+            color: black;
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 10px;
+            border: 2px solid #000;
+            max-width: 80px;
+            text-align: center;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        #speedControl {
+            padding: 5px 10px;
+            background: #34495e;
+            color: white;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #f39c12;
             border-radius: 4px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🍌 Minions Room Simulator 🍌</h1>
-        <canvas id="canvas" width="1000" height="600"></canvas>
-        <div class="info">
-            <p>👆 Click on the canvas to add waypoints • Double-click a minion to remove it</p>
+    <div id="gameContainer">
+        <div id="topBar">
+            <button onclick="game.addMinion()">👥 Add Minion</button>
+            <button onclick="game.buildingMode = !game.buildingMode">🏠 Build Mode</button>
+            <button onclick="game.triggerDisaster('earthquake')">🌍 Earthquake</button>
+            <button onclick="game.triggerDisaster('fire')">🔥 Fire</button>
+            <button onclick="game.triggerDisaster('tornado')">🌪️ Tornado</button>
+            <button onclick="game.triggerDisaster('rain')">🌧️ Heavy Rain</button>
+            <button onclick="game.triggerDisaster('plague')">☠️ Plague</button>
+            <button onclick="game.resetSim()">🔄 Reset</button>
+            <div class="controls">
+                <label style="color: white; font-size: 12px;">Speed: </label>
+                <input type="range" min="0.5" max="3" step="0.5" value="1" onchange="game.gameSpeed = this.value" style="width: 80px;">
+            </div>
         </div>
-        <div class="controls">
-            <button id="addBtn">➕ Add Minion</button>
-            <button id="clearBtn">🗑️ Clear Waypoints</button>
-            <button id="resetBtn">🔄 Reset Room</button>
-            <button id="pauseBtn">⏸️ Pause/Resume</button>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <div id="sidebar">
+        <h2>⏱️ World Stats</h2>
+        <div class="stat-row">
+            <span>Day:</span>
+            <span id="dayCount">0</span>
         </div>
-        <div class="stats">
-            <p>👥 Minions: <span id="minionCount">0</span></p>
-            <p>📍 Waypoints: <span id="waypointCount">0</span></p>
-            <p>⚡ FPS: <span id="fps">0</span></p>
+        <div class="stat-row">
+            <span>Season:</span>
+            <span id="season">Spring</span>
         </div>
-        <div class="minion-list">
-            <h3>Active Minions:</h3>
-            <div id="minionDetails"></div>
+        <div class="stat-row">
+            <span>Weather:</span>
+            <span id="weather">Clear</span>
+        </div>
+        <div class="stat-row">
+            <span>Minions:</span>
+            <span id="minionCount">0</span>
+        </div>
+        <div class="stat-row">
+            <span>Houses:</span>
+            <span id="houseCount">0</span>
+        </div>
+        <div class="stat-row">
+            <span>Crops:</span>
+            <span id="cropCount">0</span>
+        </div>
+        <div class="stat-row">
+            <span>Avg Health:</span>
+            <span id="avgHealth">100%</span>
+        </div>
+        <hr style="margin: 15px 0; opacity: 0.3;">
+        <h2>👤 Selected Minion</h2>
+        <div id="minionDetails">
+            <div style="opacity: 0.5;">Click a minion to view details</div>
         </div>
     </div>
 
     <script>
-        // ===== GAME STATE =====
+        // ===== GAME ENGINE =====
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth - 330;
+        canvas.height = window.innerHeight - 80;
 
-        const gameState = {
-            minions: [],
-            waypoints: [],
-            paused: false,
-            frameCount: 0,
-            lastFpsTime: Date.now(),
-            fps: 0
-        };
+        class Game {
+            constructor() {
+                this.minions = [];
+                this.buildings = [];
+                this.crops = [];
+                this.particles = [];
+                this.day = 0;
+                this.dayPhase = 0;
+                this.gameSpeed = 1;
+                this.buildingMode = false;
+                this.selectedMinion = null;
+                this.weather = 'clear'; // clear, rain, snow, storm
+                this.temperature = 20;
+                this.disasterTimer = 0;
+                this.disasterType = null;
+                this.frameCount = 0;
+                this.fps = 0;
+                this.lastFpsTime = Date.now();
 
-        // ===== JOB DEFINITIONS =====
-        const JOBS = [
-            { name: 'Engineer', color: '#FF6B35', speed: 1.2, size: 12 },
-            { name: 'Scientist', color: '#004E89', speed: 1.0, size: 11 },
-            { name: 'Manager', color: '#F77F00', speed: 0.8, size: 13 },
-            { name: 'Pilot', color: '#06A77D', speed: 1.5, size: 10 },
-            { name: 'Security', color: '#D62828', speed: 1.1, size: 12 },
-            { name: 'Doctor', color: '#F4D35E', speed: 0.9, size: 11 },
-            { name: 'Chef', color: '#EE964B', speed: 0.7, size: 12 },
-            { name: 'Technician', color: '#A23B72', speed: 1.3, size: 10 }
-        ];
-
-        // ===== MINION CLASS =====
-        class Minion {
-            constructor(x, y, jobIndex) {
-                this.x = x;
-                this.y = y;
-                this.vx = 0;
-                this.vy = 0;
-                this.job = JOBS[jobIndex % JOBS.length];
-                this.radius = this.job.size;
-                this.speed = this.job.speed;
-                this.waypoints = [];
-                this.currentWaypointIndex = 0;
-                this.targetWaypoint = null;
-                this.wanderAngle = Math.random() * Math.PI * 2;
-                this.wanderTimer = 0;
-                this.nextWanderTime = 30 + Math.random() * 70;
-                this.id = Math.random().toString(36).substr(2, 9);
+                // Start with some minions
+                for (let i = 0; i < 3; i++) {
+                    this.addMinion();
+                }
             }
 
-            setWaypoints(waypoints) {
-                this.waypoints = waypoints.slice();
-                this.currentWaypointIndex = 0;
-                this.targetWaypoint = this.waypoints.length > 0 ? this.waypoints[0] : null;
+            addMinion() {
+                if (this.minions.length >= 50) return;
+                const minion = new Minion(
+                    Math.random() * (canvas.width - 100) + 50,
+                    Math.random() * (canvas.height - 100) + 50,
+                    `Minion_${this.minions.length + 1}`
+                );
+                this.minions.push(minion);
+            }
+
+            buildingMode_toggle() {
+                this.buildingMode = !this.buildingMode;
+            }
+
+            triggerDisaster(type) {
+                this.disasterType = type;
+                this.disasterTimer = 60;
+
+                if (type === 'earthquake') {
+                    this.createEarthquake();
+                } else if (type === 'fire') {
+                    this.createFire();
+                } else if (type === 'tornado') {
+                    this.createTornado();
+                } else if (type === 'rain') {
+                    this.weather = 'rain';
+                    this.createRainParticles();
+                } else if (type === 'plague') {
+                    this.minions.forEach(m => {
+                        if (Math.random() < 0.3) m.health -= 30;
+                    });
+                }
+            }
+
+            createEarthquake() {
+                this.minions.forEach(m => {
+                    m.vx = (Math.random() - 0.5) * 8;
+                    m.vy = (Math.random() - 0.5) * 8;
+                    m.health -= 10;
+                });
+                this.buildings.forEach(b => {
+                    b.health -= 20;
+                });
+            }
+
+            createFire() {
+                const randomBuilding = this.buildings[Math.floor(Math.random() * this.buildings.length)];
+                if (randomBuilding) {
+                    randomBuilding.onFire = true;
+                    randomBuilding.health -= 40;
+                }
+            }
+
+            createTornado() {
+                const centerX = Math.random() * canvas.width;
+                const centerY = Math.random() * canvas.height;
+                this.minions.forEach(m => {
+                    const dx = m.x - centerX;
+                    const dy = m.y - centerY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 150) {
+                        m.vx = (dx / dist) * 10;
+                        m.vy = (dy / dist) * 10;
+                        m.health -= 20;
+                    }
+                });
+            }
+
+            createRainParticles() {
+                for (let i = 0; i < 50; i++) {
+                    this.particles.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        vx: 0,
+                        vy: 3,
+                        type: 'rain'
+                    });
+                }
             }
 
             update() {
-                if (this.waypoints.length > 0 && this.targetWaypoint) {
-                    this.followWaypoint();
-                } else {
-                    this.wander();
+                this.frameCount++;
+
+                // Update day/night cycle
+                this.dayPhase += 0.01 * this.gameSpeed;
+                if (this.dayPhase >= 1) {
+                    this.dayPhase = 0;
+                    this.day++;
+                    this.onNewDay();
                 }
 
-                this.x += this.vx;
-                this.y += this.vy;
+                // Update weather
+                if (Math.random() < 0.001 * this.gameSpeed) {
+                    const weathers = ['clear', 'rain', 'snow'];
+                    this.weather = weathers[Math.floor(Math.random() * weathers.length)];
+                    if (this.weather === 'rain') this.createRainParticles();
+                }
 
-                // Boundaries
-                if (this.x - this.radius < 0) {
-                    this.x = this.radius;
-                    this.vx *= -0.5;
+                // Update minions
+                this.minions = this.minions.filter(m => {
+                    m.update(this);
+                    return m.health > 0;
+                });
+
+                // Update buildings
+                this.buildings.forEach(b => b.update());
+
+                // Update particles
+                this.particles = this.particles.filter(p => {
+                    p.y += p.vy;
+                    p.x += p.vx;
+                    return p.y < canvas.height;
+                });
+
+                // Update disaster
+                if (this.disasterTimer > 0) {
+                    this.disasterTimer--;
                 }
-                if (this.x + this.radius > canvas.width) {
-                    this.x = canvas.width - this.radius;
-                    this.vx *= -0.5;
+
+                // Update FPS
+                const now = Date.now();
+                if (now - this.lastFpsTime >= 1000) {
+                    this.fps = this.frameCount;
+                    this.frameCount = 0;
+                    this.lastFpsTime = now;
                 }
-                if (this.y - this.radius < 0) {
-                    this.y = this.radius;
-                    this.vy *= -0.5;
-                }
-                if (this.y + this.radius > canvas.height) {
-                    this.y = canvas.height - this.radius;
-                    this.vy *= -0.5;
-                }
+
+                this.updateUI();
             }
 
-            followWaypoint() {
-                if (!this.targetWaypoint) return;
-                const dx = this.targetWaypoint.x - this.x;
-                const dy = this.targetWaypoint.y - this.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+            onNewDay() {
+                // Feed minions daily needs
+                this.minions.forEach(m => {
+                    m.hunger += 20;
+                    m.energy -= 10;
+                    if (m.hunger > 100) m.hunger = 100;
+                });
 
-                if (distance < 15) {
-                    this.currentWaypointIndex++;
-                    if (this.currentWaypointIndex >= this.waypoints.length) {
-                        this.currentWaypointIndex = 0;
+                // Crops grow
+                this.crops.forEach(c => {
+                    c.growth += Math.random() * 10;
+                    if (c.growth >= 100) {
+                        this.minions.forEach(m => {
+                            if (Math.sqrt((m.x - c.x) ** 2 + (m.y - c.y) ** 2) < 100) {
+                                m.hunger = Math.max(0, m.hunger - 30);
+                            }
+                        });
+                        c.growth = 0;
                     }
-                    this.targetWaypoint = this.waypoints[this.currentWaypointIndex];
-                } else {
-                    const angle = Math.atan2(dy, dx);
-                    this.vx = Math.cos(angle) * this.speed;
-                    this.vy = Math.sin(angle) * this.speed;
-                }
+                });
             }
 
-            wander() {
-                this.wanderTimer++;
-                if (this.wanderTimer > this.nextWanderTime) {
-                    this.wanderAngle += (Math.random() - 0.5) * Math.PI * 0.5;
-                    this.wanderTimer = 0;
-                    this.nextWanderTime = 30 + Math.random() * 70;
+            updateUI() {
+                document.getElementById('dayCount').textContent = this.day;
+                document.getElementById('minionCount').textContent = this.minions.length;
+                document.getElementById('houseCount').textContent = this.buildings.filter(b => b.type === 'house').length;
+                document.getElementById('cropCount').textContent = this.crops.length;
+                
+                const avgHealth = this.minions.length > 0 
+                    ? Math.round(this.minions.reduce((a, b) => a + b.health, 0) / this.minions.length)
+                    : 0;
+                document.getElementById('avgHealth').textContent = avgHealth + '%';
+
+                const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
+                const season = seasons[Math.floor((this.day / 30) % 4)];
+                document.getElementById('season').textContent = season;
+                document.getElementById('weather').textContent = this.weather.toUpperCase();
+
+                if (this.selectedMinion && this.minions.includes(this.selectedMinion)) {
+                    const m = this.selectedMinion;
+                    document.getElementById('minionDetails').innerHTML = `
+                        <div class="minion-info">
+                            <h3>${m.name}</h3>
+                            <div class="minion-stat">
+                                <span>Health:</span>
+                                <span>${Math.round(m.health)}%</span>
+                            </div>
+                            <div class="minion-stat">
+                                <span>Hunger:</span>
+                                <span>${Math.round(m.hunger)}%</span>
+                            </div>
+                            <div class="minion-stat">
+                                <span>Energy:</span>
+                                <span>${Math.round(m.energy)}%</span>
+                            </div>
+                            <div class="minion-stat">
+                                <span>Happiness:</span>
+                                <span>${Math.round(m.happiness)}%</span>
+                            </div>
+                            <div class="minion-stat">
+                                <span>Status:</span>
+                                <span>${m.currentTask}</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('minionDetails').innerHTML = '<div style="opacity: 0.5;">Click a minion to view details</div>';
                 }
-                this.vx = Math.cos(this.wanderAngle) * this.speed * 0.5;
-                this.vy = Math.sin(this.wanderAngle) * this.speed * 0.5;
             }
 
             draw() {
-                ctx.fillStyle = this.job.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fill();
+                // Sky gradient
+                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                const skyColor = this.dayPhase < 0.5 ? 
+                    `hsl(200, 100%, ${50 + this.dayPhase * 20}%)` :
+                    `hsl(200, 100%, ${60 - (this.dayPhase - 0.5) * 20}%)`;
+                gradient.addColorStop(0, skyColor);
+                gradient.addColorStop(1, '#E0F6FF');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                ctx.fillStyle = '#000';
-                ctx.beginPath();
-                ctx.arc(this.x - 4, this.y - 2, 2, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(this.x + 4, this.y - 2, 2, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y + 2, 3, 0, Math.PI);
-                ctx.stroke();
-
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 8px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(this.job.name.substr(0, 3), this.x, this.y + this.radius + 10);
-            }
-
-            distanceTo(other) {
-                const dx = other.x - this.x;
-                const dy = other.y - this.y;
-                return Math.sqrt(dx * dx + dy * dy);
-            }
-
-            separateFrom(others) {
-                const separationRadius = this.radius * 3;
-                const separationForce = 0.3;
-                for (let other of others) {
-                    if (other === this) continue;
-                    const distance = this.distanceTo(other);
-                    if (distance < separationRadius && distance > 0) {
-                        const angle = Math.atan2(other.y - this.y, other.x - this.x);
-                        this.vx -= Math.cos(angle) * separationForce;
-                        this.vy -= Math.sin(angle) * separationForce;
+                // Draw particles (rain/snow)
+                this.particles.forEach(p => {
+                    if (p.type === 'rain') {
+                        ctx.strokeStyle = 'rgba(100, 150, 255, 0.5)';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(p.x, p.y + 10);
+                        ctx.stroke();
                     }
+                });
+
+                // Draw buildings
+                this.buildings.forEach(b => b.draw());
+
+                // Draw crops
+                this.crops.forEach(c => c.draw());
+
+                // Draw minions
+                this.minions.forEach(m => m.draw(m === this.selectedMinion));
+
+                // Disaster effect
+                if (this.disasterTimer > 0) {
+                    ctx.fillStyle = `rgba(255, 0, 0, ${(this.disasterTimer / 60) * 0.3})`;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+
+            resetSim() {
+                this.minions = [];
+                this.buildings = [];
+                this.crops = [];
+                this.day = 0;
+                this.dayPhase = 0;
+                for (let i = 0; i < 3; i++) {
+                    this.addMinion();
+                }
+            }
+
+            handleCanvasClick(x, y) {
+                // Check if clicked on minion
+                for (let m of this.minions) {
+                    if (Math.sqrt((m.x - x) ** 2 + (m.y - y) ** 2) < 20) {
+                        this.selectedMinion = m;
+                        m.showChatBubble(`Hello!`);
+                        return;
+                    }
+                }
+
+                if (this.buildingMode) {
+                    const building = new Building(x, y, 'house');
+                    this.buildings.push(building);
+                    this.buildingMode = false;
                 }
             }
         }
 
-        // ===== EVENT LISTENERS =====
+        class Minion {
+            constructor(x, y, name) {
+                this.x = x;
+                this.y = y;
+                this.name = name;
+                this.vx = 0;
+                this.vy = 0;
+                this.health = 100;
+                this.hunger = 30;
+                this.energy = 100;
+                this.happiness = 75;
+                this.currentTask = 'wandering';
+                this.taskTimer = 0;
+                this.chatBubble = null;
+                this.chatBubbleTimer = 0;
+            }
+
+            update(game) {
+                // Movement
+                if (Math.random() < 0.01) {
+                    this.vx = (Math.random() - 0.5) * 2;
+                    this.vy = (Math.random() - 0.5) * 2;
+                }
+
+                this.x += this.vx * game.gameSpeed;
+                this.y += this.vy * game.gameSpeed;
+
+                // Boundaries
+                if (this.x < 10) this.x = 10;
+                if (this.x > canvas.width - 10) this.x = canvas.width - 10;
+                if (this.y < 10) this.y = 10;
+                if (this.y > canvas.height - 10) this.y = canvas.height - 10;
+
+                // Health degradation
+                this.health -= 0.05 * game.gameSpeed;
+                this.energy -= 0.02 * game.gameSpeed;
+                if (this.hunger > 0) this.hunger -= 0.08 * game.gameSpeed;
+                if (this.hunger < 0) this.hunger = 0;
+
+                // Death from starvation
+                if (this.hunger >= 100 && this.health > 0) {
+                    this.health -= 0.5 * game.gameSpeed;
+                }
+
+                // Cap stats
+                this.health = Math.max(0, Math.min(100, this.health));
+                this.energy = Math.max(0, Math.min(100, this.energy));
+                this.happiness = Math.max(0, Math.min(100, this.happiness));
+
+                // Update chat bubble
+                if (this.chatBubbleTimer > 0) {
+                    this.chatBubbleTimer--;
+                }
+            }
+
+            draw(selected) {
+                // Draw body (circle)
+                ctx.fillStyle = selected ? '#FFD700' : '#FFD93D';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw eyes
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(this.x - 5, this.y - 3, 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(this.x + 5, this.y - 3, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw mouth
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y + 3, 3, 0, Math.PI);
+                ctx.stroke();
+
+                // Draw arms
+                ctx.strokeStyle = '#FFD93D';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x - 12, this.y);
+                ctx.lineTo(this.x - 20, this.y - 5);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(this.x + 12, this.y);
+                ctx.lineTo(this.x + 20, this.y - 5);
+                ctx.stroke();
+
+                // Draw legs
+                ctx.beginPath();
+                ctx.moveTo(this.x - 6, this.y + 12);
+                ctx.lineTo(this.x - 6, this.y + 20);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(this.x + 6, this.y + 12);
+                ctx.lineTo(this.x + 6, this.y + 20);
+                ctx.stroke();
+
+                // Draw selection circle
+                if (selected) {
+                    ctx.strokeStyle = '#FFD700';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // Draw health bar
+                const barWidth = 25;
+                const barHeight = 3;
+                ctx.fillStyle = '#333';
+                ctx.fillRect(this.x - barWidth / 2, this.y - 20, barWidth, barHeight);
+                ctx.fillStyle = this.health > 50 ? '#00FF00' : this.health > 25 ? '#FFAA00' : '#FF0000';
+                ctx.fillRect(this.x - barWidth / 2, this.y - 20, (barWidth * this.health) / 100, barHeight);
+
+                // Draw chat bubble
+                if (this.chatBubble && this.chatBubbleTimer > 0) {
+                    ctx.fillStyle = 'white';
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 1;
+                    const bubbleX = this.x + 25;
+                    const bubbleY = this.y - 30;
+                    const bubbleWidth = 60;
+                    const bubbleHeight = 25;
+                    const radius = 5;
+
+                    ctx.beginPath();
+                    ctx.moveTo(bubbleX + radius, bubbleY);
+                    ctx.lineTo(bubbleX + bubbleWidth - radius, bubbleY);
+                    ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY, bubbleX + bubbleWidth, bubbleY + radius);
+                    ctx.lineTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight - radius);
+                    ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight, bubbleX + bubbleWidth - radius, bubbleY + bubbleHeight);
+                    ctx.lineTo(bubbleX + 15, bubbleY + bubbleHeight);
+                    ctx.lineTo(bubbleX + 10, bubbleY + bubbleHeight + 10);
+                    ctx.lineTo(bubbleX + radius, bubbleY + bubbleHeight);
+                    ctx.quadraticCurveTo(bubbleX, bubbleY + bubbleHeight, bubbleX, bubbleY + bubbleHeight - radius);
+                    ctx.lineTo(bubbleX, bubbleY + radius);
+                    ctx.quadraticCurveTo(bubbleX, bubbleY, bubbleX + radius, bubbleY);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#000';
+                    ctx.font = '10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.chatBubble, bubbleX + bubbleWidth / 2, bubbleY + bubbleHeight / 2);
+                }
+            }
+
+            showChatBubble(text) {
+                this.chatBubble = text;
+                this.chatBubbleTimer = 60;
+            }
+        }
+
+        class Building {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.width = type === 'house' ? 40 : 30;
+                this.height = type === 'house' ? 50 : 30;
+                this.health = 100;
+                this.onFire = false;
+            }
+
+            update() {
+                if (this.onFire) {
+                    this.health -= 0.5;
+                    if (this.health <= 0) {
+                        this.onFire = false;
+                    }
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.onFire ? '#FF4444' : (this.type === 'house' ? '#8B4513' : '#90EE90');
+                ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+
+                // Roof
+                if (this.type === 'house') {
+                    ctx.fillStyle = '#DC143C';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x - this.width / 2, this.y - this.height / 2);
+                    ctx.lineTo(this.x, this.y - this.height / 2 - 15);
+                    ctx.lineTo(this.x + this.width / 2, this.y - this.height / 2);
+                    ctx.fill();
+                }
+
+                // Door
+                if (this.type === 'house') {
+                    ctx.fillStyle = '#654321';
+                    ctx.fillRect(this.x - 8, this.y, 16, 20);
+                }
+            }
+        }
+
+        class Crop {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.growth = 0;
+            }
+
+            draw() {
+                const scale = this.growth / 100;
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y, 8 * scale, 12 * scale, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // ===== MAIN GAME LOOP =====
+        const game = new Game();
+
+        function gameLoop() {
+            game.update();
+            game.draw();
+            requestAnimationFrame(gameLoop);
+        }
+
         canvas.addEventListener('click', (e) => {
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-            gameState.waypoints.push({ x, y });
-            gameState.minions.forEach(m => m.setWaypoints(gameState.waypoints));
+            game.handleCanvasClick(x, y);
         });
 
-        canvas.addEventListener('dblclick', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            for (let i = gameState.minions.length - 1; i >= 0; i--) {
-                if (gameState.minions[i].distanceTo({ x, y }) < gameState.minions[i].radius * 2) {
-                    gameState.minions.splice(i, 1);
-                    break;
-                }
-            }
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth - 330;
+            canvas.height = window.innerHeight - 80;
         });
-
-        document.getElementById('addBtn').addEventListener('click', () => {
-            if (gameState.minions.length >= 20) {
-                alert('Max 20 minions!');
-                return;
-            }
-            const minion = new Minion(
-                Math.random() * (canvas.width - 100) + 50,
-                Math.random() * (canvas.height - 100) + 50,
-                gameState.minions.length
-            );
-            minion.setWaypoints(gameState.waypoints);
-            gameState.minions.push(minion);
-        });
-
-        document.getElementById('clearBtn').addEventListener('click', () => {
-            gameState.waypoints = [];
-            gameState.minions.forEach(m => m.setWaypoints([]));
-        });
-
-        document.getElementById('resetBtn').addEventListener('click', () => {
-            gameState.minions = [];
-            gameState.waypoints = [];
-        });
-
-        document.getElementById('pauseBtn').addEventListener('click', () => {
-            gameState.paused = !gameState.paused;
-        });
-
-        // ===== UPDATE UI =====
-        function updateUI() {
-            document.getElementById('minionCount').textContent = gameState.minions.length;
-            document.getElementById('waypointCount').textContent = gameState.waypoints.length;
-            document.getElementById('fps').textContent = gameState.fps;
-
-            const detailsDiv = document.getElementById('minionDetails');
-            if (gameState.minions.length === 0) {
-                detailsDiv.innerHTML = '<div class="minion-entry">Click "Add Minion" to start!</div>';
-            } else {
-                detailsDiv.innerHTML = gameState.minions.map(m => 
-                    `<div class="minion-entry">🍌 ${m.job.name} (#${m.id.substr(0, 4)}) - (${Math.round(m.x)}, ${Math.round(m.y)})</div>`
-                ).join('');
-            }
-        }
-
-        // ===== GAME LOOP =====
-        function gameLoop() {
-            if (!gameState.paused) {
-                gameState.minions.forEach(minion => {
-                    minion.update();
-                    minion.separateFrom(gameState.minions);
-                });
-            }
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw waypoints
-            gameState.waypoints.forEach((wp, idx) => {
-                ctx.fillStyle = '#FFD700';
-                ctx.beginPath();
-                ctx.arc(wp.x, wp.y, 8, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = '#FFA500';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                ctx.fillStyle = '#000';
-                ctx.font = 'bold 10px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(idx + 1, wp.x, wp.y);
-            });
-
-            // Draw path
-            if (gameState.waypoints.length > 1) {
-                ctx.strokeStyle = 'rgba(255, 165, 0, 0.3)';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([5, 5]);
-                ctx.beginPath();
-                ctx.moveTo(gameState.waypoints[0].x, gameState.waypoints[0].y);
-                for (let i = 1; i < gameState.waypoints.length; i++) {
-                    ctx.lineTo(gameState.waypoints[i].x, gameState.waypoints[i].y);
-                }
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
-
-            // Draw minions
-            gameState.minions.forEach(m => m.draw());
-
-            // FPS
-            gameState.frameCount++;
-            const now = Date.now();
-            if (now - gameState.lastFpsTime >= 1000) {
-                gameState.fps = gameState.frameCount;
-                gameState.frameCount = 0;
-                gameState.lastFpsTime = now;
-            }
-
-            updateUI();
-            requestAnimationFrame(gameLoop);
-        }
-
-        // Start with 3 minions
-        for (let i = 0; i < 3; i++) {
-            const minion = new Minion(
-                Math.random() * (canvas.width - 100) + 50,
-                Math.random() * (canvas.height - 100) + 50,
-                i
-            );
-            gameState.minions.push(minion);
-        }
 
         gameLoop();
     </script>
