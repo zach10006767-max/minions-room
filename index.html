@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aetheria: Stone Age Neuro-Ecosystem & Interactive Sandbox</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <title>ArcaneVoxel 3D: AAA Infinite Magic Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-main: #06070b;
-            --bg-panel: rgba(9, 11, 18, 0.95);
-            --border-glow: rgba(245, 158, 11, 0.25);
-            --accent-amber: #f59e0b;
-            --accent-terracotta: #ca8a04;
-            --accent-emerald: #10b981;
-            --accent-cyan: #06b6d4;
-            --accent-rose: #f43f5e;
+            --bg-main: #020305;
+            --bg-panel: rgba(6, 10, 18, 0.85);
+            --border-arcane: rgba(168, 85, 247, 0.4);
+            --glow-arcane: rgba(168, 85, 247, 0.2);
+            --accent-mana: #06b6d4;
+            --accent-ether: #a855f7;
+            --accent-pyre: #f43f5e;
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
+            --font-display: 'Cinzel', serif;
             --font-sans: 'Plus Jakarta Sans', sans-serif;
             --font-mono: 'JetBrains Mono', monospace;
         }
@@ -30,288 +30,266 @@
         #viewportContainer { flex: 1; position: relative; height: 100%; display: flex; flex-direction: column; }
         #canvas3d { width: 100%; flex: 1; display: block; }
 
+        /* AAA Cinematic HUD HUD overlay */
+        #cinematicHUD {
+            position: absolute; inset: 0; pointer-events: none;
+            border: 24px solid transparent;
+            box-shadow: inset 0 0 80px rgba(0,0,0,0.85);
+            z-index: 80; transition: all 0.3s ease;
+        }
+
         #topTelemetryBar {
-            position: absolute; top: 16px; left: 16px; right: 16px;
-            background: var(--bg-panel); border: 1px solid var(--border-glow);
-            border-radius: 14px; padding: 16px 28px;
+            position: absolute; top: 24px; left: 24px; right: 24px;
+            background: var(--bg-panel); border: 1px solid var(--border-arcane);
+            border-radius: 16px; padding: 16px 28px;
             display: flex; justify-content: space-between; align-items: center;
-            backdrop-filter: blur(24px); z-index: 100;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+            backdrop-filter: blur(32px); z-index: 100;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8), 0 0 20px var(--glow-arcane);
         }
 
-        .metric-group { display: flex; gap: 32px; }
-        .metric-card { display: flex; flex-direction: column; gap: 4px; }
-        .metric-lbl { font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1.5px; }
-        .metric-val { font-family: var(--font-mono); font-size: 22px; font-weight: 700; color: var(--accent-amber); }
+        .engine-title { font-family: var(--font-display); font-size: 16px; font-weight: 800; letter-spacing: 2px; color: #e9d5ff; }
+        .metric-group { display: flex; gap: 36px; }
+        .metric-card { display: flex; flex-direction: column; gap: 2px; }
+        .metric-lbl { font-size: 9px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1.5px; }
+        .metric-val { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--accent-mana); }
 
-        .control-row { display: flex; gap: 12px; align-items: center; }
-        .action-btn {
-            background: linear-gradient(135deg, #b45309, #78350f);
-            color: white; border: none; padding: 12px 22px; border-radius: 10px;
-            font-size: 13px; font-weight: 700; cursor: pointer; letter-spacing: 0.5px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 18px rgba(245, 158, 11, 0.2);
+        /* Dynamic crosshair targeting node */
+        #crosshair {
+            position: absolute; top: 50%; left: 50%; width: 24px; height: 24px;
+            transform: translate(-50%, -50%); pointer-events: none; z-index: 200;
+            transition: transform 0.1s ease;
         }
-        .action-btn:hover { background: linear-gradient(135deg, #d97706, #b45309); transform: translateY(-2px); }
-        .action-btn.avatar-active { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 4px 18px rgba(16, 185, 129, 0.35); }
+        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(255, 255, 255, 0.4); border-radius: 2px; }
+        #crosshair::before { top: 11px; left: 0; width: 24px; height: 2px; }
+        #crosshair::after { top: 0; left: 11px; width: 2px; height: 24px; }
+        #crosshair.casting { transform: translate(-50%, -50%) scale(1.4) rotate(45deg); }
 
+        /* Arcane Spell Selection Hotbar Grid */
         .hotbar {
-            position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
-            background: var(--bg-panel); border: 2px solid var(--border-glow);
-            padding: 8px; border-radius: 16px; display: flex; gap: 8px; z-index: 100;
-            box-shadow: 0 16px 48px rgba(0,0,0,0.8); backdrop-filter: blur(20px);
+            position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
+            background: var(--bg-panel); border: 1px solid var(--border-arcane);
+            padding: 8px; border-radius: 20px; display: flex; gap: 10px; z-index: 100;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.9), 0 0 30px var(--glow-arcane); backdrop-filter: blur(24px);
         }
         .hotbar-slot {
-            width: 52px; height: 52px; border-radius: 12px; background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column;
-            justify-content: center; align-items: center; font-size: 20px; cursor: pointer;
-            position: relative; transition: all 0.15s ease;
+            width: 64px; height: 64px; border-radius: 14px; background: rgba(255,255,255,0.01);
+            border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; font-size: 26px; cursor: pointer;
+            position: relative; transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
+        .hotbar-slot:hover { border-color: rgba(168, 85, 247, 0.6); background: rgba(168, 85, 247, 0.05); }
         .hotbar-slot.active {
-            border-color: var(--accent-amber); background: rgba(245, 158, 11, 0.15);
-            box-shadow: 0 0 14px rgba(245, 158, 11, 0.4);
+            border-color: var(--accent-ether); background: rgba(168, 85, 247, 0.2);
+            box-shadow: 0 0 20px var(--accent-ether), inset 0 0 12px var(--accent-ether);
+            transform: scale(1.1) translateY(-6px);
         }
-        .slot-key { position: absolute; top: 2px; left: 5px; font-size: 8px; font-family: var(--font-mono); color: var(--text-secondary); }
+        .slot-key { position: absolute; top: 4px; left: 6px; font-size: 9px; font-family: var(--font-mono); color: var(--text-secondary); }
+        .slot-name { position: absolute; bottom: -20px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); opacity: 0; transition: opacity 0.2s; }
+        .hotbar-slot.active .slot-name { opacity: 1; color: #e9d5ff; }
 
-        #sidebarControl {
-            width: 440px; background: var(--bg-panel);
-            border-left: 1px solid var(--border-glow);
-            display: flex; flex-direction: column; height: 100%;
-            backdrop-filter: blur(24px); z-index: 90;
+        /* Cinematic Viewport Notifications */
+        #logContainer {
+            position: absolute; bottom: 120px; left: 32px; width: 380px;
+            display: flex; flex-direction: column; gap: 8px; pointer-events: none; z-index: 100;
+        }
+        .log-msg {
+            font-family: var(--font-mono); font-size: 11px; background: rgba(4, 6, 11, 0.85);
+            border-left: 3px solid var(--accent-ether); padding: 10px 16px; border-radius: 0 8px 8px 0;
+            backdrop-filter: blur(12px); color: #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            animation: slideIn 0.25s cubic-bezier(0.215, 0.610, 0.355, 1) forwards;
         }
 
-        .panel-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .panel-header { padding: 16px 24px; font-size: 11px; font-weight: 700; color: var(--text-primary); letter-spacing: 2px; text-transform: uppercase; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .panel-content { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
-
-        .resource-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .res-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; padding: 14px; display: flex; align-items: center; justify-content: space-between; }
-        .res-name { font-size: 13px; color: var(--text-secondary); }
-        .res-amount { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--accent-amber); }
-
-        .log-row { font-family: var(--font-mono); font-size: 11px; padding: 10px 12px; border-left: 3px solid var(--accent-amber); margin-bottom: 8px; color: var(--text-secondary); background: rgba(255,255,255,0.01); border-radius: 0 8px 8px 0; }
-        .log-row.hobby { border-left-color: var(--accent-cyan); background: rgba(6, 182, 212, 0.04); }
-        .log-row.stress { border-left-color: var(--accent-rose); background: rgba(244, 63, 94, 0.04); }
-
-        .manifest-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
-        .manifest-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
-        .gauge-container { display: flex; flex-direction: column; gap: 4px; }
-        .gauge-lbl { font-size: 9px; text-transform: uppercase; color: var(--text-secondary); font-weight: 700; }
-        .gauge-bg { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
-        .gauge-fill { height: 100%; transition: width 0.2s ease; }
-
-        #crosshair {
-            position: absolute; top: 50%; left: 50%; width: 14px; height: 14px;
-            transform: translate(-50%, -50%); pointer-events: none; display: none; z-index: 200;
+        /* Ambient Vitals Bars Overlay */
+        #vitalsContainer {
+            position: absolute; bottom: 36px; left: 32px; width: 240px;
+            display: flex; flex-direction: column; gap: 8px; z-index: 100; pointer-events: none;
         }
-        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(255,255,255,0.85); }
-        #crosshair::before { top: 6px; left: 0; width: 14px; height: 2px; }
-        #crosshair::after { top: 0; left: 6px; width: 2px; height: 14px; }
+        .vitals-bar-bg { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; border: 1px solid rgba(255,255,255,0.02); }
+        .vitals-bar-fill { height: 100%; width: 100%; transition: width 0.3s ease; }
 
         #instructionsOverlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(6, 7, 11, 0.94); display: none;
+            background: linear-gradient(135deg, rgba(2, 3, 5, 0.98), rgba(10, 6, 18, 0.98)); display: flex;
             flex-direction: column; justify-content: center; align-items: center;
-            z-index: 150; text-align: center; padding: 40px;
+            z-index: 150; text-align: center; padding: 40px; transition: opacity 0.4s ease;
         }
-        #instructionsOverlay h2 { font-size: 32px; font-weight: 700; color: var(--accent-amber); margin-bottom: 20px; letter-spacing: 1px; }
-        #instructionsOverlay p { max-width: 540px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 28px; font-size: 14px; }
-        .keybind-list { font-family: var(--font-mono); font-size: 14px; color: #fde047; margin-bottom: 32px; line-height: 2; border: 1px solid rgba(253, 224, 71, 0.2); padding: 16px 28px; border-radius: 12px; background: rgba(253, 224, 71, 0.02); }
+        #instructionsOverlay h1 { font-family: var(--font-display); font-size: 44px; font-weight: 800; color: #f3e8ff; margin-bottom: 8px; letter-spacing: 4px; text-shadow: 0 0 30px var(--accent-ether); }
+        #instructionsOverlay p { max-width: 600px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 36px; font-size: 14px; }
+        
+        .btn-prime {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: white; border: none; padding: 16px 36px; border-radius: 12px;
+            font-size: 13px; font-weight: 700; cursor: pointer; letter-spacing: 1.5px; text-transform: uppercase;
+            transition: all 0.25s ease; box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35), 0 0 15px var(--glow-arcane);
+        }
+        .btn-prime:hover { background: linear-gradient(135deg, #8b5cf6, #7c3aed); transform: translateY(-2px); box-shadow: 0 12px 32px rgba(124, 58, 237, 0.5); }
+        
+        .keybind-matrix {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 40px;
+            font-family: var(--font-mono); font-size: 12px; color: #e2e8f0;
+            margin-bottom: 40px; text-align: left; background: rgba(255,255,255,0.01);
+            padding: 24px 36px; border-radius: 16px; border: 1px solid rgba(168, 85, 247, 0.15);
+        }
+
+        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
 </head>
 <body>
 
+    <div id="cinematicHUD"></div>
+
     <div id="viewportContainer">
         <div id="topTelemetryBar">
+            <div class="engine-title">ARCANE VOXEL ARCHITECTURE</div>
             <div class="metric-group">
-                <div class="metric-card"><span class="metric-lbl">Era Cycle</span><span class="metric-value" id="ui-day">Stone Age (Y-1)</span></div>
-                <div class="metric-card"><span class="metric-lbl">Tribe Population</span><span class="metric-value" id="ui-pop">4</span></div>
-                <div class="metric-card"><span class="metric-lbl">Fauna Group</span><span class="metric-value" id="ui-fauna">4</span></div>
-            </div>
-            <div class="control-row">
-                <button class="action-btn" id="btnPossess" onclick="engine.toggleAvatarPossession()">POSSESS TRIBAL AVATAR</button>
+                <div class="metric-card"><span class="metric-lbl">Raster Speed</span><span class="metric-val" id="ui-fps">60 FPS</span></div>
+                <div class="metric-card"><span class="metric-lbl">Coordinates</span><span class="metric-val" id="ui-pos">X: 8, Y: 24, Z: 8</span></div>
+                <div class="metric-card"><span class="metric-lbl">Aether Memory</span><span class="metric-val" id="ui-chunks">Chunks: 0</span></div>
             </div>
         </div>
 
         <div id="crosshair"></div>
+        <div id="logContainer"></div>
+
+        <div id="vitalsContainer">
+            <div style="display:flex; justify-content:space-between; font-size:10px; font-weight:700; letter-spacing:1px; color:var(--accent-mana)"><span>MANA RESONANCE</span><span>100%</span></div>
+            <div class="vitals-bar-bg"><div class="vitals-bar-fill" style="background:linear-gradient(90deg, #06b6d4, #3b82f6)"></div></div>
+        </div>
 
         <div class="hotbar" id="hotbar">
-            <div class="hotbar-slot active" data-block="1" onclick="engine.setActiveSlot(0)"><span class="slot-key">1</span>🪨</div>
-            <div class="hotbar-slot" data-block="2" onclick="engine.setActiveSlot(1)"><span class="slot-key">2</span>🪵</div>
-            <div class="hotbar-slot" data-block="3" onclick="engine.setActiveSlot(2)"><span class="slot-key">3</span>🌿</div>
-            <div class="hotbar-slot" data-block="4" onclick="engine.setActiveSlot(3)"><span class="slot-key">4</span>🔥</div>
+            <div class="hotbar-slot active" onclick="engine.setActiveSlot(0)"><span class="slot-key">1</span>🔮<span class="slot-name">Aether Burst</span></div>
+            <div class="hotbar-slot" onclick="engine.setActiveSlot(1)"><span class="slot-key">2</span>🔥<span class="slot-name">Pyre Strike</span></div>
+            <div class="hotbar-slot" onclick="engine.setActiveSlot(2)"><span class="slot-key">3</span>🌿<span class="slot-name">Earthy Form</span></div>
+            <div class="hotbar-slot" onclick="engine.setActiveSlot(3)"><span class="slot-key">4</span>⚡<span class="slot-name">Volt Transmute</span></div>
         </div>
 
         <div id="instructionsOverlay" onclick="engine.requestPointerLock()">
-            <h2>NEURAL TRIBAL LINK SYNCED</h2>
-            <p>You are materializing as a member of the Paleolithic group. Harvest raw resources, place survival modules, and observe the psychological adaptation cycles of your tribe.</p>
-            <div class="keybind-list">
-                [W, A, S, D] &rarr; Spatial Navigation Vectors<br>
-                [SPACEBAR]   &rarr; Kinetic Jump Impulse Force<br>
-                [MOUSE]      &rarr; Dual-Axis Look Orientation<br>
-                [LEFT CLICK] &rarr; Strike / Mine Voxel Node<br>
-                [RIGHT CLICK]&rarr; Construct Tribal Core Module<br>
-                [1, 2, 3, 4] &rarr; Material Hotbar Slot Select
+            <h1>ARCANE VOXEL v1.0</h1>
+            <p>Experience an immersive, high-performance voxel sandbox powered by a hardware-accelerated chunk-meshing processor, predictive bounding-volume spatial mechanics, and a real-time particle-light projection system.</p>
+            <div class="keybind-matrix">
+                <div>[W, A, S, D] &rarr; Spatial Kinetic Locomotion</div>
+                <div>[LEFT CLICK] &rarr; Project Active Arcane Spell</div>
+                <div>[SPACEBAR]  &rarr; Gravitational Suspension Leap</div>
+                <div>[RIGHT CLICK]&rarr; Transmute / Construct Voxel Element</div>
+                <div>[MOUSE]      &rarr; Dual-Axis Camera Vision Look</div>
+                <div>[Keys 1 - 4] &rarr; Cycle Active Magical Tuning Matrix</div>
             </div>
-            <button class="action-btn">INTERACT WITH THE ENGINE</button>
+            <button class="btn-prime">Synchronize Consciousness Matrix</button>
         </div>
         <div id="canvas3d"></div>
-    </div>
-
-    <div id="sidebarControl">
-        <div class="panel-section">
-            <div class="panel-header">🪵 Paleolithic Storage Pit</div>
-            <div class="panel-content">
-                <div class="resource-grid">
-                    <div class="res-box"><span class="res-name">🥩 Raw Game</span><span class="res-amount" id="res-food">400</span></div>
-                    <div class="res-box"><span class="res-name">🪵 Hardwood</span><span class="res-amount" id="res-wood">150</span></div>
-                    <div class="res-box"><span class="res-name">🪨 Flint/Flakes</span><span class="res-amount" id="res-stone">80</span></div>
-                    <div class="res-box"><span class="res-name">🌿 Fiber/Hide</span><span class="res-amount" id="res-fiber">40</span></div>
-                </div>
-                <div class="resource-grid" style="margin-top: 12px;">
-                    <div class="res-box"><span class="res-name">⛺ Mud Huts</span><span class="res-amount" id="res-huts">0</span></div>
-                    <div class="res-box"><span class="res-name">🔥 Hearths</span><span class="res-amount" id="res-hearths">1</span></div>
-                </div>
-            </div>
-        </div>
-        <div class="panel-section">
-            <div class="panel-header">📡 Tribal Oral History Chronicles</div>
-            <div class="panel-content" id="logContainer"></div>
-        </div>
-        <div class="panel-section">
-            <div class="panel-header">🧠 Neuro-Psychological Diagnostics</div>
-            <div class="panel-content" id="manifestContainer"></div>
-        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
         // =========================================================================
-        // HIGH-DENSITY PROGRAMMATIC PAYLOAD SCALE ARRAY (TARGET FOOTPRINT)
+        // PSEUDO-RANDOM DETERMINISTIC NOISE ENGINE (2D MAP OVERLAYS)
         // =========================================================================
-        const TRIBAL_HISTORY_ARCHIVE_DATA = [];
-        for (let eraIdx = 0; eraIdx < 110; eraIdx++) {
-            let recordRow = [];
-            for (let EntryIdx = 0; EntryIdx < 7500; EntryIdx++) {
-                let waveValue = Math.sin(EntryIdx) * Math.cos(eraIdx);
-                recordRow.push({
-                    header: `PALEOLITHIC_CHRONICLE_SECTOR_${eraIdx}_NODE_${EntryIdx}`,
-                    dataMatrix: [waveValue, Math.tan(EntryIdx), Math.sqrt(Math.abs(waveValue))],
-                    rawHexToken: "0xABCDEF99887766554433221100FEDCBA99887766554433221100AABBCCDDEEFF1122334455",
-                    validationSignature: "PALEOLITHIC_SIMULATION_STABILITY_ASSERTION_LOOP_BYTE_PADDING_METRIC_TRUE"
-                });
-            }
-            TRIBAL_HISTORY_ARCHIVE_DATA.push(recordRow);
-        }
-
-        // =========================================================================
-        // ADVANCED 3D survival ENGINE CORE PIPELINE
-        // =========================================================================
-
-        const VOXEL_TYPES = {
-            AIR: 0, SOIL: 1, MUD_BRICK: 2, WOOD_LOG: 3, STONE_FLINT: 4, LEAF_CANOPY: 5, BLUEPRINT: 6, PLAYER_STONE: 7
-        };
-        const VOXEL_COLORS = {
-            1: 0x3d2b1f, 2: 0x5c4a3c, 3: 0x4a3525, 4: 0x4b5563, 5: 0x14532d, 6: 0xd97706, 7: 0x374151
+        const PerlinNoiseEngine = new function() {
+            this.perm = new Uint8Array(512); const src = Array.from({length: 256}, (_, i) => i);
+            for(let i = 255; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = src[i]; src[i] = src[j]; src[j] = t; }
+            for(let i = 0; i < 512; i++) this.perm[i] = src[i & 255];
+            this.fade = t => t * t * t * (t * (t * 6 - 15) + 10);
+            this.lerp = (t, a, b) => a + t * (b - a);
+            this.grad = (h, x, y) => { const s = h & 7; return ((s&1)?-x:x) + ((s&2)?-2.0*y:2.0*y); };
+            this.noise2D = (x, y) => {
+                const X = Math.floor(x) & 255; const Y = Math.floor(y) & 255; x -= Math.floor(x); y -= Math.floor(y);
+                const u = this.fade(x); const v = this.fade(y);
+                const A = this.perm[X] + Y; const B = this.perm[X + 1] + Y;
+                return this.lerp(v, this.lerp(u, this.grad(this.perm[A], x, y), this.grad(this.perm[B], x - 1, y)),
+                                     this.lerp(u, this.grad(this.perm[A + 1], x, y - 1), this.grad(this.perm[B + 1], x - 1, y - 1)));
+            };
         };
 
-        const HOBBIES = ["Fishing", "Flint Knapping", "Cave Painting", "Ritual Dancing"];
-        const AI_NAMES = ["Turok", "Oona", "Grog", "Kala", "Thag", "Sela"];
+        // =========================================================================
+        // ENGINE PARAMS & CONFIGURATIONS
+        // =========================================================================
+        const SPELL_TYPES = { AETHER: 0, PYRE: 1, EARTH: 2, VOLT: 3 };
+        const BLOCK_TYPES = { AIR: 0, AETHERIUM: 1, NETHERRACK: 2, OBSIDIAN: 3, COAL: 4, EMERALD: 5 };
+        const BLOCK_COLORS = { 1: 0x4c1d95, 2: 0x991b1b, 3: 0x0f172a, 4: 0x1e293b, 5: 0x047857 };
 
-        class EngineCore {
+        const CHUNK_SIZE = 16; const CHUNK_HEIGHT = 32; const RENDER_DISTANCE = 3;
+
+        class AAAMagicEngine {
             constructor() {
-                this.ticks = 0; this.timeCycle = 0.5; this.years = 1;
-                this.chunkSize = 10; this.renderRadius = 2;
-                this.chunks = {}; this.renderableMeshes = [];
-                this.villagers = []; this.fauna = [];
-                this.activeSlotIndex = 0;
+                this.chunks = {}; this.activeMeshes = {}; this.interactableObjectsList = [];
+                this.projectiles = []; this.particles = []; this.activeSlotIndex = 0;
                 
-                this.resources = { food: 400, wood: 150, stone: 80, fiber: 40, huts: 0, hearths: 1 };
-                this.logs = [];
+                // Cinematic camera state tracking mechanics
+                this.fovTarget = 75; this.shakeForce = 0; this.bobTimer = 0;
 
-                this.avatarPossessed = false;
-                this.avatarState = {
-                    position: new THREE.Vector3(5, 5, 5),
-                    velocity: new THREE.Vector3(),
-                    rotation: new THREE.Vector2(),
-                    moveForward: false, moveBackward: false, moveLeft: false, moveRight: false,
-                    canJump: false
+                this.player = {
+                    position: new THREE.Vector3(8, 22, 8), velocity: new THREE.Vector3(), rotation: new THREE.Vector2(),
+                    moveForward: false, moveBackward: false, moveLeft: false, moveRight: false, canJump: false, width: 0.6, height: 1.8
                 };
 
-                this.initRenderEngine();
-                this.generateVoxelTerrain();
-                this.spawnEcosystem();
-                this.setupControls();
-
-                this.addLog("🔥 Tribal Fire Kindled. Stone Age simulation loop running.", "info");
+                this.initGraphicsPipeline();
+                this.synchronizeWorldMap();
+                this.bindHardwareInterfaces();
+                this.pushSystemLog("🔮 Nexus Continuum online. Infusing spatial engine fields with ether.");
             }
 
-            initRenderEngine() {
+            initGraphicsPipeline() {
                 const container = document.getElementById('canvas3d');
                 this.scene = new THREE.Scene();
-                this.scene.background = new THREE.Color(0x06080c);
-                this.scene.fog = new THREE.FogExp2(0x06080c, 0.02);
+                this.scene.background = new THREE.Color(0x030206);
+                this.scene.fog = new THREE.FogExp2(0x030206, 0.015);
 
-                this.camera = new THREE.PerspectiveCamera(55, container.clientWidth / container.clientHeight, 0.1, 1000);
-                this.setSpectatorCamera();
-
-                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+                
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
                 this.renderer.setSize(container.clientWidth, container.clientHeight);
-                this.renderer.shadowMap.enabled = true;
-                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
                 container.appendChild(this.renderer.domElement);
 
-                this.ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
-                this.scene.add(this.ambientLight);
+                // High-contrast atmospheric lighting pairs
+                const ambientLight = new THREE.AmbientLight(0x1e1b4b, 0.6);
+                this.scene.add(ambientLight);
 
-                this.sunLight = new THREE.DirectionalLight(0xfff6e0, 0.9);
-                this.sunLight.castShadow = true;
-                this.sunLight.shadow.mapSize.width = 2048;
-                this.sunLight.shadow.mapSize.height = 2048;
-                this.scene.add(this.sunLight);
+                this.directionalLight = new THREE.DirectionalLight(0xc084fc, 0.4);
+                this.directionalLight.position.set(20, 40, 10);
+                this.scene.add(this.directionalLight);
 
-                // Setup centralized campfire light
-                this.campfireLight = new THREE.PointLight(0xf59e0b, 2, 15);
-                this.campfireLight.position.set(5, 1.5, 5);
-                this.scene.add(this.campfireLight);
-
-                this.raycaster = new THREE.Raycaster();
-                this.raycaster.far = 7;
+                this.raycaster = new THREE.Raycaster(); this.raycaster.far = 8;
             }
 
-            setSpectatorCamera() {
-                this.camera.position.set(15, 20, 25);
-                this.camera.lookAt(5, 2, 5);
-            }
+            synchronizeWorldMap() {
+                const cx = Math.floor(this.player.position.x / CHUNK_SIZE);
+                const cz = Math.floor(this.player.position.z / CHUNK_SIZE);
 
-            generateVoxelTerrain() {
-                for (let cx = -this.renderRadius; cx <= this.renderRadius; cx++) {
-                    for (let cz = -this.renderRadius; cz <= this.renderRadius; cz++) {
-                        this.buildChunkMatrixAt(cx, cz);
+                for (let x = -RENDER_DISTANCE; x <= RENDER_DISTANCE; x++) {
+                    for (let z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
+                        const tkx = cx + x; const tkz = cz + z; const key = `${tkx},${tkz}`;
+                        if (!this.chunks[key]) this.generateProceduralDataChunk(tkx, tkz);
                     }
                 }
-                this.compileWorldGeometry();
+                
+                for (let key in this.chunks) {
+                    if (!this.activeMeshes[key]) this.buildInstancedHardwareMesh(key);
+                }
+                document.getElementById('ui-chunks').textContent = `Chunks Loaded: ${Object.keys(this.chunks).length}`;
             }
 
-            buildChunkMatrixAt(cx, cz) {
-                const key = `${cx},${cz}`;
-                let data = new Uint8Array(this.chunkSize * 16 * this.chunkSize);
+            generateProceduralDataChunk(cx, cz) {
+                const key = `${cx},${cz}`; const data = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
 
-                for (let x = 0; x < this.chunkSize; x++) {
-                    for (let z = 0; z < this.chunkSize; z++) {
-                        let wx = cx * this.chunkSize + x;
-                        let wz = cz * this.chunkSize + z;
-
-                        // Procedural ground equations
-                        let baseHeight = Math.floor(3 + Math.sin(wx * 0.15) * Math.cos(wz * 0.15) * 2);
+                for (let x = 0; x < CHUNK_SIZE; x++) {
+                    for (let z = 0; z < CHUNK_SIZE; z++) {
+                        const gx = cx * CHUNK_SIZE + x; const gz = cz * CHUNK_SIZE + z;
                         
-                        for (let y = 0; y < 16; y++) {
-                            let idx = x + (y * this.chunkSize) + (z * this.chunkSize * 16);
-                            if (y < baseHeight) {
-                                data[idx] = VOXEL_TYPES.SOIL;
+                        let baseNoise = PerlinNoiseEngine.noise2D(gx * 0.03, gz * 0.03) * 10;
+                        baseNoise += PerlinNoiseEngine.noise2D(gx * 0.09, gz * 0.09) * 3;
+                        const surfaceY = Math.floor(15 + baseNoise);
+
+                        for (let y = 0; y < CHUNK_HEIGHT; y++) {
+                            const idx = x + (y * CHUNK_SIZE) + (z * CHUNK_SIZE * CHUNK_HEIGHT);
+                            if (y === surfaceY) {
+                                data[idx] = (Math.random() < 0.15) ? BLOCK_TYPES.AETHERIUM : BLOCK_TYPES.NETHERRACK;
+                            } else if (y < surfaceY && y > surfaceY - 5) {
+                                data[idx] = BLOCK_TYPES.OBSIDIAN;
+                            } else if (y <= surfaceY - 5) {
+                                data[idx] = (Math.random() < 0.02) ? BLOCK_TYPES.EMERALD : BLOCK_TYPES.COAL;
                             } else {
-                                data[idx] = VOXEL_TYPES.AIR;
+                                data[idx] = BLOCK_TYPES.AIR;
                             }
                         }
                     }
@@ -319,39 +297,184 @@
                 this.chunks[key] = data;
             }
 
-            compileWorldGeometry() {
-                this.renderableMeshes.forEach(m => this.scene.remove(m));
-                this.renderableMeshes = [];
+            buildInstancedHardwareMesh(key) {
+                const parts = key.split(','); const cx = parseInt(parts[0]); const cz = parseInt(parts[1]);
+                const data = this.chunks[key]; const trackingMap = {}; const boxGeo = new THREE.BoxGeometry(1, 1, 1);
 
-                const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+                for (let i = 0; i < data.length; i++) {
+                    if (data[i] !== BLOCK_TYPES.AIR) trackingMap[data[i]] = (trackingMap[data[i]] || 0) + 1;
+                }
 
-                for (let key in this.chunks) {
-                    let parts = key.split(',');
-                    let cx = parseInt(parts[0]);
-                    let cz = parseInt(parts[1]);
-                    let data = this.chunks[key];
+                const rootGroup = new THREE.Group();
 
-                    for (let x = 0; x < this.chunkSize; x++) {
-                        for (let z = 0; z < this.chunkSize; z++) {
-                            for (let y = 0; y < 16; y++) {
-                                let idx = x + (y * this.chunkSize) + (z * this.chunkSize * 16);
-                                let type = data[idx];
+                for (let type in trackingMap) {
+                    const mat = new THREE.MeshStandardMaterial({ color: BLOCK_COLORS[type], roughness: 0.5, metalness: 0.2, flatShading: true });
+                    const instMesh = new THREE.InstancedMesh(boxGeo, mat, trackingMap[type]);
+                    let idxOffset = 0; const dummy = new THREE.Object3D();
 
-                                if (type !== VOXEL_TYPES.AIR) {
-                                    let wx = cx * this.chunkSize + x;
-                                    let wz = cz * this.chunkSize + z;
+                    for (let x = 0; x < CHUNK_SIZE; x++) {
+                        for (let z = 0; z < CHUNK_SIZE; z++) {
+                            for (let y = 0; y < CHUNK_HEIGHT; y++) {
+                                const didx = x + (y * CHUNK_SIZE) + (z * CHUNK_SIZE * CHUNK_HEIGHT);
+                                if (data[didx] === parseInt(type)) {
+                                    dummy.position.set(cx * CHUNK_SIZE + x, y, cz * CHUNK_SIZE + z);
+                                    dummy.updateMatrix();
+                                    instMesh.setMatrixAt(idxOffset++, dummy.matrix);
+                                }
+                            }
+                        }
+                    }
+                    instMesh.instanceMatrix.needsUpdate = true;
+                    rootGroup.add(instMesh);
+                }
 
-                                    let mat = new THREE.MeshStandardMaterial({
-                                        color: VOXEL_COLORS[type], roughness: 0.9, flatShading: true
-                                    });
-                                    let mesh = new THREE.Mesh(boxGeo, mat);
-                                    mesh.position.set(wx, y, wz);
-                                    mesh.receiveShadow = true;
-                                    mesh.castShadow = true;
-                                    mesh.userData = { chunkKey: key, blockIndex: idx, type: type, wx: wx, y: y, wz: wz };
+                this.scene.add(rootGroup); this.activeMeshes[key] = rootGroup;
+                this.interactableObjectsList = Object.values(this.activeMeshes).flatMap(g => g.children);
+            }
 
-                                    this.scene.add(mesh);
-                                    this.renderableMeshes.push(mesh);
+            getBlockAt(wx, y, wz) {
+                const cx = Math.floor(wx / CHUNK_SIZE); const cz = Math.floor(wz / CHUNK_SIZE); const key = `${cx},${cz}`;
+                if (!this.chunks[key] || y < 0 || y >= CHUNK_HEIGHT) return BLOCK_TYPES.AIR;
+                const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+                const lz = ((wz % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+                return this.chunks[key][lx + (y * CHUNK_SIZE) + (lz * CHUNK_SIZE * CHUNK_HEIGHT)];
+            }
+
+            setBlockAt(wx, y, wz, type) {
+                const cx = Math.floor(wx / CHUNK_SIZE); const cz = Math.floor(wz / CHUNK_SIZE); const key = `${cx},${cz}`;
+                if (!this.chunks[key]) return;
+                const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+                const lz = ((wz % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+                this.chunks[key][lx + (y * CHUNK_SIZE) + (lz * CHUNK_SIZE * CHUNK_HEIGHT)] = type;
+
+                if (this.activeMeshes[key]) { this.scene.remove(this.activeMeshes[key]); delete this.activeMeshes[key]; }
+                this.buildInstancedHardwareMesh(key);
+            }
+
+            castActiveSpell() {
+                this.fovTarget = 88; this.shakeForce = 0.22;
+                document.getElementById('crosshair').classList.add('casting');
+                setTimeout(() => document.getElementById('crosshair').classList.remove('casting'), 150);
+
+                const spellColor = [0x06b6d4, #ff3366, 0xa855f7, 0x10b981][this.activeSlotIndex];
+                const spellNames = ["Aether Burst", "Pyre Strike", "Earthy Form", "Volt Transmute"];
+                this.pushSystemLog(`✨ Manifested spell matrix: [${spellNames[this.activeSlotIndex]}]`);
+
+                // Create physical dynamic projectile entity
+                const geo = new THREE.SphereGeometry(0.15, 8, 8);
+                const mat = new THREE.MeshBasicMaterial({ color: spellColor });
+                const mesh = new THREE.Mesh(geo, mat);
+                
+                // Position sphere slightly offset from camera vector path
+                mesh.position.copy(this.player.position).sub(new THREE.Vector3(0, 0.3, 0));
+                
+                const forwardDir = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+                mesh.position.add(forwardDir.clone().multiplyScalar(0.5));
+
+                // Accompany spell matrix with a dynamic light component
+                const light = new THREE.PointLight(spellColor, 2.5, 8);
+                mesh.add(light); this.scene.add(mesh);
+
+                this.projectiles.push({
+                    mesh, velocity: forwardDir.multiplyScalar(0.48), life: 60, type: this.activeSlotIndex
+                });
+            }
+
+            transmuteTargetBlockLocal() {
+                this.raycaster.setFromCamera(new THREE.Vector2(0,0), this.camera);
+                const intersects = this.raycaster.intersectObjects(this.interactableObjectsList);
+                if (intersects.length > 0) {
+                    const hitPoint = intersects[0].point.clone().add(intersects[0].face.normal.clone().multiplyScalar(0.5));
+                    const tx = Math.floor(hitPoint.x); const ty = Math.floor(hitPoint.y); const tz = Math.floor(hitPoint.z);
+                    this.setBlockAt(tx, ty, tz, BLOCK_TYPES.AETHERIUM);
+                    this.triggerImpactParticles(tx, ty, tz, 0xa855f7);
+                }
+            }
+
+            triggerImpactParticles(x, y, z, color) {
+                const particleCount = 18;
+                const pGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+                const pMat = new THREE.MeshBasicMaterial({ color: color });
+
+                for(let i=0; i<particleCount; i++) {
+                    const pMesh = new THREE.Mesh(pGeo, pMat);
+                    pMesh.position.set(x + (Math.random()-0.5), y + 0.5, z + (Math.random()-0.5));
+                    this.scene.add(pMesh);
+                    this.particles.push({
+                        mesh: pMesh,
+                        velocity: new THREE.Vector3((Math.random()-0.5)*0.1, (Math.random()*0.15)+0.05, (Math.random()-0.5)*0.1),
+                        life: 30 + Math.random()*20
+                    });
+                }
+            }
+
+            updateProjectilesAndEffects() {
+                // Loop backwards to safely drop spliced vectors
+                for (let i = this.projectiles.length - 1; i >= 0; i--) {
+                    const p = this.projectiles[i]; p.mesh.position.add(p.velocity); p.life--;
+
+                    const tx = Math.round(p.mesh.position.x);
+                    const ty = Math.round(p.mesh.position.y);
+                    const tz = Math.round(p.mesh.position.z);
+
+                    if (this.getBlockAt(tx, ty, tz) !== BLOCK_TYPES.AIR || p.life <= 0) {
+                        if (p.life > 0) {
+                            this.setBlockAt(tx, ty, tz, BLOCK_TYPES.AIR);
+                            const explosionColor = [0x06b6d4, 0xf43f5e, 0xa855f7, 0x10b981][p.type];
+                            this.triggerImpactParticles(tx, ty, tz, explosionColor);
+                            this.shakeForce = 0.35; // Trigger impact shake explosion reaction forces
+                        }
+                        this.scene.remove(p.mesh); this.projectiles.splice(i, 1);
+                    }
+                }
+
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const pt = this.particles[i];
+                    pt.velocity.y -= 0.005; // Gravity pull calculation on sub-particles
+                    pt.mesh.position.add(pt.velocity); pt.life--;
+                    if (pt.life <= 0) { this.scene.remove(pt.mesh); this.particles.splice(i, 1); }
+                }
+
+                // Smooth cinematic camera visual return lines
+                this.camera.fov += (this.fovTarget - this.camera.fov) * 0.1;
+                this.camera.updateProjectionMatrix(); this.fovTarget = 75;
+            }
+
+            applyKineticPhysicsMatrix() {
+                const p = this.player; p.velocity.y -= 0.008; // Continuous gravity vector pull
+                p.velocity.x *= 0.72; p.velocity.z *= 0.72;
+
+                p.position.x += p.velocity.x; this.processAxisSeparation('x');
+                p.position.z += p.velocity.z; this.processAxisSeparation('z');
+                p.position.y += p.velocity.y; p.canJump = false; this.processAxisSeparation('y');
+
+                if (p.position.y < -30) { p.position.set(8, 25, 8); p.velocity.set(0,0,0); }
+            }
+
+            processAxisSeparation(axis) {
+                const p = this.player;
+                const minX = Math.floor(p.position.x - p.width/2); const maxX = Math.floor(p.position.x + p.width/2);
+                const minY = Math.floor(p.position.y - p.height);    const maxY = Math.floor(p.position.y);
+                const minZ = Math.floor(p.position.z - p.width/2); const maxZ = Math.floor(p.position.z + p.width/2);
+
+                for (let x = minX; x <= maxX; x++) {
+                    for (let y = minY; y <= maxY; y++) {
+                        for (let z = minZ; z <= maxZ; z++) {
+                            if (this.getBlockAt(x, y, z) !== BLOCK_TYPES.AIR) {
+                                if (axis === 'x') {
+                                    if (p.velocity.x > 0) p.position.x = x - p.width/2;
+                                    if (p.velocity.x < 0) p.position.x = x + 1 + p.width/2;
+                                    p.velocity.x = 0;
+                                }
+                                if (axis === 'z') {
+                                    if (p.velocity.z > 0) p.position.z = z - p.width/2;
+                                    if (p.velocity.z < 0) p.position.z = z + 1 + p.width/2;
+                                    p.velocity.z = 0;
+                                }
+                                if (axis === 'y') {
+                                    if (p.velocity.y > 0) p.position.y = y - 0.01;
+                                    if (p.velocity.y < 0) { p.position.y = y + p.height + 0.01; p.canJump = true; }
+                                    p.velocity.y = 0;
                                 }
                             }
                         }
@@ -359,459 +482,101 @@
                 }
             }
 
-            getVoxelAt(wx, y, wz) {
-                let cx = Math.floor(wx / this.chunkSize);
-                let cz = Math.floor(wz / this.chunkSize);
-                let key = `${cx},${cz}`;
-                if (!this.chunks[key]) return 0;
-
-                let lx = ((wx % this.chunkSize) + this.chunkSize) % this.chunkSize;
-                let lz = ((wz % this.chunkSize) + this.chunkSize) % this.chunkSize;
-                let idx = lx + (y * this.chunkSize) + (lz * this.chunkSize * 16);
-                return this.chunks[key][idx];
+            setActiveSlot(idx) {
+                this.activeSlotIndex = idx;
+                document.querySelectorAll('.hotbar-slot').forEach((s, i) => s.classList.toggle('active', i === idx));
             }
 
-            setVoxelAt(wx, y, wz, type) {
-                let cx = Math.floor(wx / this.chunkSize);
-                let cz = Math.floor(wz / this.chunkSize);
-                let key = `${cx},${cz}`;
-                if (!this.chunks[key]) return;
-
-                let lx = ((wx % this.chunkSize) + this.chunkSize) % this.chunkSize;
-                let lz = ((wz % this.chunkSize) + this.chunkSize) % this.chunkSize;
-                let idx = lx + (y * this.chunkSize) + (lz * this.chunkSize * 16);
-
-                this.chunks[key][idx] = type;
-                this.compileWorldGeometry();
-            }
-
-            spawnEcosystem() {
-                // Instantiate highly detailed lifelike trees and resources
-                this.spawnNaturalTreeMeshAt(2, 3, 2);
-                this.spawnNaturalTreeMeshAt(8, 3, 3);
-                this.spawnNaturalTreeMeshAt(3, 3, 9);
-
-                // Spawn flint node deposits
-                this.setVoxelAt(8, 3, 7, VOXEL_TYPES.STONE_FLINT);
-                this.setVoxelAt(1, 3, 6, VOXEL_TYPES.STONE_FLINT);
-
-                // Instantiate Neural Tribal AI Villagers
-                for (let i = 0; i < 4; i++) {
-                    this.villagers.push(new TribalVillager(4 + i * 0.8, 1, 4, this.scene));
-                }
-
-                // Instantiate complex lifelike animal structures
-                for (let i = 0; i < 4; i++) {
-                    this.fauna.push(new OrganicFauna(Math.random() * 10, 1, Math.random() * 10, this.scene));
-                }
-            }
-
-            spawnNaturalTreeMeshAt(wx, y, wz) {
-                // Procedural generation of organic trunks and leaf clusters
-                for (let ty = 0; ty < 3; ty++) {
-                    this.setVoxelAt(wx, y + ty, wz, VOXEL_TYPES.WOOD_LOG);
-                }
-                // Branching leaf cluster envelopes
-                for (let lx = -1; lx <= 1; lx++) {
-                    for (let lz = -1; lz <= 1; lz++) {
-                        this.setVoxelAt(wx + lx, y + 3, wz + lz, VOXEL_TYPES.LEAF_CANOPY);
-                        if (Math.random() > 0.4) {
-                            this.setVoxelAt(wx + lx, y + 4, wz + lz, VOXEL_TYPES.LEAF_CANOPY);
-                        }
-                    }
-                }
-            }
-
-            toggleAvatarPossession() {
-                this.avatarPossessed = !this.avatarPossessed;
-                const overlay = document.getElementById('instructionsOverlay');
-                const crosshair = document.getElementById('crosshair');
-                const btn = document.getElementById('btnPossess');
-
-                if (this.avatarPossessed) {
-                    overlay.style.display = 'flex';
-                    crosshair.style.display = 'block';
-                    btn.textContent = "RETURN TO SPECTATOR";
-                    btn.classList.add('avatar-active');
-                } else {
-                    document.exitPointerLock();
-                    overlay.style.display = 'none';
-                    crosshair.style.display = 'none';
-                    btn.textContent = "POSSESS TRIBAL AVATAR";
-                    btn.classList.remove('avatar-active');
-                    this.setSpectatorCamera();
-                }
-            }
-
-            requestPointerLock() {
-                document.getElementById('canvas3d').requestPointerLock();
-            }
-
-            setActiveSlot(index) {
-                this.activeSlotIndex = index;
-                document.querySelectorAll('.hotbar-slot').forEach((s, idx) => {
-                    s.classList.toggle('active', idx === index);
-                });
-            }
-
-            setupControls() {
+            bindHardwareInterfaces() {
                 document.addEventListener('pointerlockchange', () => {
-                    document.getElementById('instructionsOverlay').style.display = 
-                        (document.pointerLockElement === document.getElementById('canvas3d')) ? 'none' : 'flex';
+                    document.getElementById('instructionsOverlay').style.opacity = (document.pointerLockElement === document.getElementById('canvas3d')) ? '0' : '1';
+                    document.getElementById('instructionsOverlay').style.pointerEvents = (document.pointerLockElement === document.getElementById('canvas3d')) ? 'none' : 'all';
                 });
 
-                window.addEventListener('keydown', (e) => {
-                    if (!this.avatarPossessed) return;
-                    if (e.code === 'KeyW') this.avatarState.moveForward = true;
-                    if (e.code === 'KeyS') this.avatarState.moveBackward = true;
-                    if (e.code === 'KeyA') this.avatarState.moveLeft = true;
-                    if (e.code === 'KeyD') this.avatarState.moveRight = true;
-                    if (e.code === 'Space' && this.avatarState.canJump) {
-                        this.avatarState.velocity.y = 0.17; this.avatarState.canJump = false;
-                    }
+                window.addEventListener('keydown', e => {
+                    const p = this.player;
+                    if (e.code === 'KeyW') p.moveForward = true; if (e.code === 'KeyS') p.moveBackward = true;
+                    if (e.code === 'KeyA') p.moveLeft = true;    if (e.code === 'KeyD') p.moveRight = true;
+                    if (e.code === 'Space' && p.canJump) { p.velocity.y = 0.165; p.canJump = false; }
                     if (e.key >= '1' && e.key <= '4') this.setActiveSlot(parseInt(e.key) - 1);
                 });
 
-                window.addEventListener('keyup', (e) => {
-                    if (e.code === 'KeyW') this.avatarState.moveForward = false;
-                    if (e.code === 'KeyS') this.avatarState.moveBackward = false;
-                    if (e.code === 'KeyA') this.avatarState.moveLeft = false;
-                    if (e.code === 'KeyD') this.avatarState.moveRight = false;
+                window.addEventListener('keyup', e => {
+                    const p = this.player;
+                    if (e.code === 'KeyW') p.moveForward = false; if (e.code === 'KeyS') p.moveBackward = false;
+                    if (e.code === 'KeyA') p.moveLeft = false;    if (e.code === 'KeyD') p.moveRight = false;
                 });
 
-                document.addEventListener('mousemove', (e) => {
+                document.addEventListener('mousemove', e => {
                     if (document.pointerLockElement !== document.getElementById('canvas3d')) return;
-                    this.avatarState.rotation.y -= e.movementX * 0.0025;
-                    this.avatarState.rotation.x -= e.movementY * 0.0025;
-                    this.avatarState.rotation.x = Math.max(-Math.PI/2.1, Math.min(Math.PI/2.1, this.avatarState.rotation.x));
+                    this.player.rotation.y -= e.movementX * 0.0022; this.player.rotation.x -= e.movementY * 0.0022;
+                    this.player.rotation.x = Math.max(-Math.PI/2.1, Math.min(Math.PI/2.1, this.player.rotation.x));
                 });
 
-                document.addEventListener('mousedown', (e) => {
+                document.addEventListener('mousedown', e => {
                     if (document.pointerLockElement !== document.getElementById('canvas3d')) return;
                     e.preventDefault();
-                    if (e.button === 0) this.handleRaycastInteraction(true);
-                    if (e.button === 2) this.handleRaycastInteraction(false);
+                    if (e.button === 0) this.castActiveSpell();
+                    if (e.button === 2) this.transmuteTargetBlockLocal();
                 });
-
                 window.addEventListener('contextmenu', e => e.preventDefault());
             }
 
-            handleRaycastInteraction(isMining) {
-                this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
-                const intersections = this.raycaster.intersectObjects(this.renderableMeshes);
+            requestPointerLock() { document.getElementById('canvas3d').requestPointerLock(); }
 
-                if (intersections.length > 0) {
-                    const target = intersections[0];
-                    const d = target.object.userData;
-
-                    if (isMining) {
-                        this.setVoxelAt(d.wx, d.y, d.wz, VOXEL_TYPES.AIR);
-                        if (d.type === VOXEL_TYPES.WOOD_LOG) this.resources.wood += 25;
-                        if (d.type === VOXEL_TYPES.STONE_FLINT) this.resources.stone += 15;
-                        this.addLog(`🪓 Mined raw voxel elements at position [${d.wx}, ${d.y}, ${d.wz}]`, "info");
-                    } else {
-                        const norm = target.face.normal;
-                        const px = d.wx + norm.x; const py = d.y + norm.y; const pz = d.wz + norm.z;
-                        
-                        const blockToPlace = [VOXEL_TYPES.STONE_FLINT, VOXEL_TYPES.WOOD_LOG, VOXEL_TYPES.SOIL, VOXEL_TYPES.MUD_BRICK][this.activeSlotIndex];
-                        this.setVoxelAt(px, py, pz, blockToPlace);
-                        this.addLog(`⛺ Affixed crude structural block at coordinates [${px}, ${py}, ${pz}]`, "build");
-                    }
-                }
-            }
-
-            updatePhysicsAndAvatar() {
-                let s = this.avatarState;
-                s.velocity.x *= 0.75; s.velocity.z *= 0.75; s.velocity.y -= 0.009;
-
-                let inputVec = new THREE.Vector3();
-                if (s.moveForward) inputVec.z -= 1; if (s.moveBackward) inputVec.z += 1;
-                if (s.moveLeft) inputVec.x -= 1; if (s.moveRight) inputVec.x += 1;
-                inputVec.normalize();
-
-                let yawQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), s.rotation.y);
-                inputVec.applyQuaternion(yawQuat);
-
-                s.velocity.x += inputVec.x * 0.024; s.velocity.z += inputVec.z * 0.024;
-                s.position.add(s.velocity);
-
-                if (s.position.y <= 4.2) {
-                    s.position.y = 4.2; s.velocity.y = 0; s.canJump = true;
-                }
-
-                this.camera.position.copy(s.position);
-                this.camera.quaternion.setFromEuler(new THREE.Euler(s.rotation.x, s.rotation.y, 0, 'YXZ'));
-            }
-
-            runChronosCycles() {
-                this.ticks++;
-                this.timeCycle += 0.0008;
-                if (this.timeCycle > Math.PI * 2) { this.timeCycle = 0; this.years++; }
-
-                // Dynamic Day/Night Luminescence Vector Modulations
-                this.sunLight.position.set(Math.cos(this.timeCycle) * 25, Math.sin(this.timeCycle) * 35, 10);
-                this.sunLight.intensity = Math.max(0.05, Math.sin(this.timeCycle) * 0.95);
-                
-                // Campfire dynamic flicker processing
-                this.campfireLight.intensity = 1.6 + Math.sin(this.ticks * 0.2) * 0.2;
-
-                // Process agent behavior trees
-                this.villagers.forEach(v => v.tick(this));
-                this.fauna.forEach(f => f.tick(this));
-
-                // Automated Mud Hut framework deployment logic
-                if (this.ticks % 400 === 0 && this.resources.wood >= 50) {
-                    let rx = Math.floor(Math.random() * 8) + 1;
-                    let rz = Math.floor(Math.random() * 8) + 1;
-                    if (this.getVoxelAt(rx, 3, rz) === VOXEL_TYPES.AIR) {
-                        this.resources.wood -= 40;
-                        this.setVoxelAt(rx, 3, rz, VOXEL_TYPES.MUD_BRICK);
-                        this.resources.huts++;
-                        this.addLog(`⛺ Tribal collective completed a mud shelter framework at [${rx}, 3, ${rz}]`, "build");
-                    }
-                }
-
-                this.updateUI();
-            }
-
-            updateUI() {
-                document.getElementById('ui-day').textContent = `Stone Age (Y-${this.years})`;
-                document.getElementById('ui-pop').textContent = this.villagers.length;
-                document.getElementById('ui-fauna').textContent = this.fauna.length;
-
-                document.getElementById('res-food').textContent = Math.floor(this.resources.food);
-                document.getElementById('res-wood').textContent = Math.floor(this.resources.wood);
-                document.getElementById('res-stone').textContent = Math.floor(this.resources.stone);
-                document.getElementById('res-fiber').textContent = Math.floor(this.resources.fiber);
-                document.getElementById('res-huts').textContent = this.resources.huts;
-
-                document.getElementById('logContainer').innerHTML = this.logs.map(l => `
-                    <div class="log-row ${l.type}"><strong>${l.stamp}</strong> ${l.msg}</div>
-                `).join('');
-
-                document.getElementById('manifestContainer').innerHTML = this.villagers.map(v => `
-                    <div class="manifest-card">
-                        <div class="manifest-row"><span>Tribe Member: <strong>${v.name}</strong></span><span style="color:var(--accent-amber)">${v.currentTask.toUpperCase()}</span></div>
-                        <div class="gauge-container">
-                            <span class="gauge-lbl">Neurological Stress Index</span>
-                            <div class="gauge-bg"><div class="gauge-fill" style="width:${v.stress}%; background: ${v.stress > 65 ? 'var(--accent-rose)' : 'var(--accent-cyan)'}"></div></div>
-                        </div>
-                        <div class="manifest-row" style="font-size:11px; margin-top:2px; color:var(--text-secondary)">
-                            <span>Hobby Preference: <strong>${v.hobby}</strong></span>
-                        </div>
-                    </div>
-                `).join('');
-            }
-
-            addLog(msg, type = 'info') {
-                this.logs.unshift({ msg, type, stamp: `[Cycle-${this.ticks}]` });
-                if (this.logs.length > 10) this.logs.pop();
+            pushSystemLog(msg) {
+                const el = document.createElement('div'); el.className = 'log-msg'; el.textContent = msg;
+                const c = document.getElementById('logContainer'); c.appendChild(el);
+                if (c.children.length > 5) c.removeChild(c.firstChild);
+                setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 4000);
             }
 
             loop() {
                 requestAnimationFrame(() => this.loop());
-                this.runChronosCycles();
+                const p = this.player;
 
-                if (this.avatarPossessed && document.pointerLockElement === document.getElementById('canvas3d')) {
-                    this.updatePhysicsAndAvatar();
-                } else {
-                    let t = Date.now() * 0.00005;
-                    this.camera.position.set(5 + Math.sin(t) * 15, 12, 5 + Math.cos(t) * 15);
-                    this.camera.lookAt(5, 2, 5);
+                if (document.pointerLockElement === document.getElementById('canvas3d')) {
+                    let moveVec = new THREE.Vector3();
+                    if (p.moveForward) moveVec.z -= 1; if (p.moveBackward) moveVec.z += 1;
+                    if (p.moveLeft) moveVec.x -= 1;    if (p.moveRight) moveVec.x += 1;
+                    moveVec.normalize();
+                    moveVec.applyQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), p.rotation.y));
+
+                    const currentMoveSpeed = 0.055;
+                    p.velocity.x += moveVec.x * currentMoveSpeed; p.velocity.z += moveVec.z * currentMoveSpeed;
+
+                    this.applyKineticPhysicsMatrix();
+                    this.synchronizeWorldMap();
+
+                    // Calculate procedural camera head bob vectors during movement
+                    if (p.moveForward || p.moveBackward || p.moveLeft || p.moveRight) {
+                        this.bobTimer += 0.14;
+                    }
                 }
 
+                // Construct complete cinematic transform tree for camera tracking
+                this.camera.position.copy(p.position);
+                
+                // Add head-bob transformations
+                this.camera.position.y += Math.sin(this.bobTimer) * 0.04;
+                
+                // Overlay camera shake algorithms onto look vector loops
+                if (this.shakeForce > 0.01) {
+                    this.camera.position.x += (Math.random() - 0.5) * this.shakeForce;
+                    this.camera.position.y += (Math.random() - 0.5) * this.shakeForce;
+                    this.shakeForce *= 0.88; // Exponential damping decay equations
+                }
+
+                this.camera.quaternion.setFromEuler(new THREE.Euler(p.rotation.x, p.rotation.y, 0, 'YXZ'));
+                document.getElementById('ui-pos').textContent = `X: ${Math.floor(p.position.x)}, Y: ${Math.floor(p.position.y)}, Z: ${Math.floor(p.position.z)}`;
+                
+                this.updateProjectilesAndEffects();
                 this.renderer.render(this.scene, this.camera);
             }
         }
 
-        // =========================================================================
-        // NEUROLOGICAL INTERACTIVE TRIBAL VILLAGER AGENT PIPELINE
-        // =========================================================================
-
-        class TribalVillager {
-            constructor(x, y, z, scene) {
-                this.x = x; this.y = y; this.z = z;
-                this.tx = x; this.tz = z;
-                this.scene = scene;
-                
-                this.name = AI_NAMES[Math.floor(Math.random() * AI_NAMES.length)] + `_${Math.floor(Math.random()*90+10)}`;
-                this.hobby = HOBBIES[Math.floor(Math.random() * HOBBIES.length)];
-                
-                this.stress = Math.random() * 30;
-                this.currentTask = 'resting'; // 'foraging', 'building', 'hobby'
-                this.animTime = Math.random() * 100;
-
-                this.assembleHighFidelityVoxelMesh();
-            }
-
-            assembleHighFidelityVoxelMesh() {
-                this.group = new THREE.Group();
-                this.group.position.set(this.x, this.y, this.z);
-
-                // Build composite anatomical segments
-                const torso = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.42, 0.22), new THREE.MeshStandardMaterial({ color: 0x854d0e }));
-                torso.position.y = 0.35; torso.castShadow = true;
-                this.group.add(torso);
-
-                const head = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.16), new THREE.MeshStandardMaterial({ color: 0xd9a066 }));
-                head.position.y = 0.65;
-                this.group.add(head);
-
-                // Add striking hair voxels
-                const hair = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.06, 0.18), new THREE.MeshStandardMaterial({ color: 0x1c1917 }));
-                hair.position.set(0, 0.74, 0);
-                this.group.add(hair);
-
-                this.lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.22, 0.06), new THREE.MeshStandardMaterial({ color: 0x451a03 }));
-                this.lLeg.position.set(-0.06, 0.11, 0); this.group.add(this.lLeg);
-
-                this.rLeg = this.lLeg.clone(); this.rLeg.position.x = 0.06; this.group.add(this.rLeg);
-
-                this.scene.add(this.group);
-            }
-
-            tick(engine) {
-                this.animTime += 0.2;
-                
-                // Stress accrual state changes
-                if (this.currentTask === 'foraging' || this.currentTask === 'building') {
-                    this.stress += 0.08;
-                } else if (this.currentTask === 'hobby') {
-                    this.stress -= 0.18; // Hobbies act as potent mental de-stressors
-                }
-                this.stress = Math.max(0, Math.min(100, this.stress));
-
-                this.evaluateBehaviorTree(engine);
-                this.navigateTowardCoordinates();
-                this.processTaskInteractions(engine);
-            }
-
-            evaluateBehaviorTree(engine) {
-                // If stress crosses critical threshold, switch states to pursue a hobby
-                if (this.stress > 75 && this.currentTask !== 'hobby') {
-                    this.currentTask = 'hobby';
-                    engine.addLog(`🧠 ${this.name} became overstressed from labor and began [${this.hobby}]`, "stress");
-                    this.tx = 2 + Math.random() * 6; this.tz = 2 + Math.random() * 6;
-                    return;
-                }
-
-                if (this.currentTask === 'hobby' && this.stress < 10) {
-                    this.currentTask = 'resting';
-                    engine.addLog(`✨ ${this.name} stabilized mentally and returned to tribal duties.`, "hobby");
-                    return;
-                }
-
-                if (this.currentTask === 'resting' || Math.random() < 0.01) {
-                    if (this.currentTask !== 'hobby') {
-                        this.currentTask = 'foraging';
-                        // Pinpoint targeted raw resource deposits
-                        this.tx = (Math.random() > 0.5) ? 2 : 8;
-                        this.tz = (Math.random() > 0.5) ? 2 : 7;
-                    }
-                }
-            }
-
-            navigateTowardCoordinates() {
-                let dx = this.tx - this.x; let dz = this.tz - this.z;
-                let d = Math.sqrt(dx*dx + dz*dz);
-
-                if (d > 0.25) {
-                    this.x += (dx / d) * 0.035; this.z += (dz / d) * 0.035;
-                    this.group.position.set(this.x, 3.2, this.z);
-                    this.group.rotation.y = Math.atan2(dx, dz);
-
-                    this.lLeg.rotation.x = Math.sin(this.animTime) * 0.55;
-                    this.rLeg.rotation.x = -Math.sin(this.animTime) * 0.55;
-                }
-            }
-
-            processTaskInteractions(engine) {
-                let d = Math.sqrt(Math.pow(this.tx - this.x, 2) + Math.pow(this.tz - this.z, 2));
-                if (d > 0.4) return;
-
-                if (this.currentTask === 'foraging') {
-                    engine.resources.food += 0.2; engine.resources.wood += 0.1;
-                    if (Math.random() < 0.02) {
-                        this.currentTask = 'resting'; this.tx = 5; this.tz = 5; // Return to campfire
-                    }
-                }
-            }
-        }
-
-        // =========================================================================
-        // HIGH-FIDELITY COMPOSITE FAUNA ANIMAL CLASS MODULE
-        // =========================================================================
-
-        class OrganicFauna {
-            constructor(x, y, z, scene) {
-                this.x = x; this.y = y; this.z = z;
-                this.tx = x; this.tz = z;
-                this.scene = scene;
-                this.animTime = Math.random() * 80;
-
-                this.buildHighFidelityVoxelAnimal();
-            }
-
-            buildHighFidelityVoxelAnimal() {
-                this.group = new THREE.Group();
-                this.group.position.set(this.x, this.y, this.z);
-
-                // Build structural anatomically detailed body segments
-                const body = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.26, 0.24), new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.95 }));
-                body.position.y = 0.25; body.castShadow = true;
-                this.group.add(body);
-
-                const neck = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, 0.12), new THREE.MeshStandardMaterial({ color: 0x78350f }));
-                neck.position.set(0.18, 0.36, 0);
-                this.group.add(neck);
-
-                const head = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 0.14), new THREE.MeshStandardMaterial({ color: 0x451a03 }));
-                head.position.set(0.24, 0.45, 0);
-                this.group.add(head);
-
-                // Add detailed tusk/horn voxels
-                const tuskL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 0.04), new THREE.MeshBasicMaterial({ color: 0xe2e8f0 }));
-                tuskL.position.set(0.32, 0.42, 0.06); this.group.add(tuskL);
-                const tuskR = tuskL.clone(); tuskR.position.z = -0.06; this.group.add(tuskR);
-
-                // Articulated leg segments
-                this.legFL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.06), new THREE.MeshStandardMaterial({ color: 0x1c1917 }));
-                this.legFL.position.set(0.14, 0.05, 0.08); this.group.add(this.legFL);
-                
-                this.legFR = this.legFL.clone(); this.legFR.position.z = -0.08; this.group.add(this.legFR);
-                this.legBL = this.legFL.clone(); this.legBL.position.x = -0.14; this.group.add(this.legBL);
-                this.legBR = this.legBL.clone(); this.legBR.position.z = -0.08; this.group.add(this.legBR);
-
-                this.scene.add(this.group);
-            }
-
-            tick(engine) {
-                this.animTime += 0.15;
-                if (Math.random() < 0.015) {
-                    this.tx = Math.max(1, Math.min(engine.chunkSize * 2, this.x + (Math.random() * 6 - 3)));
-                    this.tz = Math.max(1, Math.min(engine.chunkSize * 2, this.z + (Math.random() * 6 - 3)));
-                }
-
-                let dx = this.tx - this.x; let dz = this.tz - this.z;
-                let d = Math.sqrt(dx*dx + dz*dz);
-
-                if (d > 0.15) {
-                    this.x += (dx / d) * 0.022; this.z += (dz / d) * 0.022;
-                    this.group.position.set(this.x, 3.1 + Math.abs(Math.sin(this.animTime * 2.5)) * 0.04, this.z);
-                    this.group.rotation.y = Math.atan2(dx, dz);
-
-                    this.legFL.rotation.x = Math.sin(this.animTime) * 0.4;
-                    this.legBR.rotation.x = Math.sin(this.animTime) * 0.4;
-                    this.legFR.rotation.x = -Math.sin(this.animTime) * 0.4;
-                    this.legBL.rotation.x = -Math.sin(this.animTime) * 0.4;
-                }
-            }
-        }
-
-        // Initialize and execute engine loop processing threads
-        const engine = new EngineCore();
+        const engine = new AAAMagicEngine();
         engine.loop();
-
     </script>
 </body>
 </html>
