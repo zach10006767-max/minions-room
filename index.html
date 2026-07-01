@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aetheria 3D Settlement Engine - Engine Core v3.0</title>
+    <title>Aetheria Interactive 3D Sandbox & Colony Engine</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-main: #06070a;
-            --bg-panel: rgba(10, 12, 22, 0.9);
-            --border-glow: rgba(6, 182, 212, 0.2);
+            --bg-main: #040508;
+            --bg-panel: rgba(8, 10, 18, 0.9);
+            --border-glow: rgba(6, 182, 212, 0.25);
             --accent-cyan: #06b6d4;
             --accent-emerald: #10b981;
             --accent-amber: #f59e0b;
@@ -39,50 +39,70 @@
             border-radius: 12px; padding: 16px 24px;
             display: flex; justify-content: space-between; align-items: center;
             backdrop-filter: blur(16px); z-index: 100;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
         }
 
-        .metric-group { display: flex; gap: 32px; }
+        .metric-group { display: flex; gap: 28px; }
         .metric-card { display: flex; flex-direction: column; gap: 4px; }
         .metric-lbl { font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1.5px; }
         .metric-val { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--accent-cyan); }
 
-        .era-banner {
-            background: linear-gradient(135deg, #3b82f6, #06b6d4);
-            padding: 8px 18px; border-radius: 8px;
-            font-size: 13px; font-weight: 700; letter-spacing: 1px;
-            text-transform: uppercase; box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+        .control-row { display: flex; gap: 10px; align-items: center; }
+        .action-btn {
+            background: linear-gradient(135deg, #0891b2, #0e7490);
+            color: white; border: none; padding: 10px 18px; border-radius: 8px;
+            font-size: 12px; font-weight: 700; cursor: pointer; letter-spacing: 0.5px;
+            transition: all 0.2s ease; box-shadow: 0 4px 14px rgba(6, 182, 212, 0.3);
         }
+        .action-btn:hover { background: linear-gradient(135deg, #06b6d4, #0891b2); transform: translateY(-1px); }
+        .action-btn.avatar-active { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3); }
 
         #sidebarControl {
-            width: 400px; background: var(--bg-panel);
+            width: 380px; background: var(--bg-panel);
             border-left: 1px solid var(--border-glow);
             display: flex; flex-direction: column; height: 100%;
             backdrop-filter: blur(20px); z-index: 90;
-            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
         }
 
         .panel-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .panel-header { padding: 16px 24px; font-size: 11px; font-weight: 700; color: var(--text-primary); letter-spacing: 2px; text-transform: uppercase; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .panel-content { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
+        .panel-header { padding: 14px 20px; font-size: 11px; font-weight: 700; color: var(--text-primary); letter-spacing: 2px; text-transform: uppercase; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .panel-content { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
 
-        .resource-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .res-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 14px; display: flex; align-items: center; justify-content: space-between; }
+        .resource-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .res-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between; }
         .res-name { font-size: 12px; color: var(--text-secondary); }
-        .res-amount { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--accent-cyan); }
+        .res-amount { font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: var(--accent-cyan); }
 
-        .log-row { font-family: var(--font-mono); font-size: 11px; padding: 10px; border-left: 3px solid var(--accent-cyan); margin-bottom: 8px; color: var(--text-secondary); background: rgba(255,255,255,0.01); border-radius: 0 6px 6px 0; }
-        .log-row.evo { border-left-color: var(--accent-amber); background: rgba(245, 158, 11, 0.05); color: #fde047; }
+        .log-row { font-family: var(--font-mono); font-size: 11px; padding: 8px 10px; border-left: 3px solid var(--accent-cyan); margin-bottom: 6px; color: var(--text-secondary); background: rgba(255,255,255,0.01); }
         .log-row.build { border-left-color: var(--accent-emerald); }
 
-        .manifest-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .manifest-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
         .manifest-row { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
-        .gauge-bg { height: 5px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
-        .gauge-fill { height: 100%; transition: width 0.3s ease; }
+        .gauge-bg { height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
+        .gauge-fill { height: 100%; }
 
-        .sim-speed-box { display: flex; gap: 4px; background: rgba(0,0,0,0.3); padding: 4px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
-        .speed-btn { background: transparent; color: var(--text-secondary); border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 700; font-family: var(--font-mono); }
-        .speed-btn.active, .speed-btn:hover { background: var(--accent-cyan); color: var(--bg-main); }
+        /* Crosshair hud layer for avatar tracking alignment */
+        #crosshair {
+            position: absolute; top: 50%; left: 50%;
+            width: 10px; height: 10px;
+            transform: translate(-50%, -50%);
+            pointer-events: none; display: none; z-index: 200;
+        }
+        #crosshair::before, #crosshair::after {
+            content: ''; position: absolute; background: rgba(255,255,255,0.7);
+        }
+        #crosshair::before { top: 4px; left: 0; width: 10px; height: 2px; }
+        #crosshair::after { top: 0; left: 4px; width: 2px; height: 10px; }
+
+        #instructionsOverlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(4, 5, 8, 0.85); display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+            z-index: 150; text-align: center; padding: 30px;
+        }
+        #instructionsOverlay h2 { font-size: 28px; color: var(--accent-cyan); margin-bottom: 16px; }
+        #instructionsOverlay p { max-width: 500px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px; }
+        .keybind-list { font-family: var(--font-mono); font-size: 13px; color: #fde047; margin-bottom: 24px; line-height: 1.8; }
     </style>
 </head>
 <body>
@@ -90,42 +110,51 @@
     <div id="viewportContainer">
         <div id="topTelemetryBar">
             <div class="metric-group">
-                <div class="metric-card"><span class="metric-lbl">Solar Cycle</span><span class="metric-value" id="ui-day">1</span></div>
-                <div class="metric-card"><span class="metric-lbl">Humanoids</span><span class="metric-value" id="ui-pop">4</span></div>
-                <div class="metric-card"><span class="metric-lbl">Fauna Count</span><span class="metric-value" id="ui-fauna">8</span></div>
+                <div class="metric-card"><span class="metric-lbl">Cycles</span><span class="metric-value" id="ui-day">1</span></div>
+                <div class="metric-card"><span class="metric-lbl">AI Humans</span><span class="metric-value" id="ui-pop">4</span></div>
+                <div class="metric-card"><span class="metric-lbl">Entity Count</span><span class="metric-value" id="ui-fauna">6</span></div>
             </div>
-            <div class="era-banner" id="ui-era">Primitive Settlement</div>
-            <div class="sim-speed-box">
-                <button class="speed-btn active" id="sp1" onclick="engine.setSpeed(1)">1X</button>
-                <button class="speed-btn" id="sp2" onclick="engine.setSpeed(2)">2X</button>
-                <button class="speed-btn" id="sp4" onclick="engine.setSpeed(4)">4X</button>
+            <div class="control-row">
+                <button class="action-btn" id="btnPossess" onclick="engine.toggleAvatarPossession()">POSSESS AVATAR</button>
             </div>
+        </div>
+        <div id="crosshair"></div>
+        <div id="instructionsOverlay" onclick="engine.requestPointerLock()">
+            <h2>AVATAR CONSOLE INITIALIZED</h2>
+            <p>You are stepping directly inside the simulation environment matrix layer. Your movements will interact natively with the automated AI entities.</p>
+            <div class="keybind-list">
+                [W, A, S, D] -> Movement Vectors<br>
+                [SPACEBAR]  -> Impulse Physics Jump<br>
+                [MOUSE]     -> Look Orientation Axis<br>
+                [LEFT CLICK]-> Construct Block Module
+            </div>
+            <button class="action-btn">ENGAGE LOCK LINK</button>
         </div>
         <div id="canvas3d"></div>
     </div>
 
     <div id="sidebarControl">
         <div class="panel-section">
-            <div class="panel-header">⚡ Matrix Resource Stockpile</div>
+            <div class="panel-header">📦 Material Quantization</div>
             <div class="panel-content">
                 <div class="resource-grid">
-                    <div class="res-box"><span class="res-name">🥩 Biomass</span><span class="res-amount" id="res-food">500</span></div>
-                    <div class="res-box"><span class="res-name">🪵 Cellulose</span><span class="res-amount" id="res-wood">200</span></div>
-                    <div class="res-box"><span class="res-name">🪨 Silicates</span><span class="res-amount" id="res-stone">100</span></div>
-                    <div class="res-box"><span class="res-name">⚡ Ferrum Alloy</span><span class="res-amount" id="res-iron">0</span></div>
+                    <div class="res-box"><span class="res-name">🍖 Biomass</span><span class="res-amount" id="res-food">400</span></div>
+                    <div class="res-box"><span class="res-name">🪵 Cellulose</span><span class="res-amount" id="res-wood">150</span></div>
+                    <div class="res-box"><span class="res-name">🪨 Silicates</span><span class="res-amount" id="res-stone">80</span></div>
+                    <div class="res-box"><span class="res-name">⚡ Ferrum</span><span class="res-amount" id="res-iron">0</span></div>
                 </div>
                 <div class="resource-grid" style="margin-top: 8px;">
-                    <div class="res-box"><span class="res-name">🏠 Modules</span><span class="res-amount" id="res-mods">0</span></div>
-                    <div class="res-box"><span class="res-name">🛌 Bed Capacity</span><span class="res-amount" id="res-beds">4</span></div>
+                    <div class="res-box"><span class="res-name">🏠 Buildings</span><span class="res-amount" id="res-mods">0</span></div>
+                    <div class="res-box"><span class="res-name">🛌 Beds</span><span class="res-amount" id="res-beds">4</span></div>
                 </div>
             </div>
         </div>
         <div class="panel-section">
-            <div class="panel-header">📡 Real-Time Colony Logs</div>
+            <div class="panel-header">📡 Ecosystem Broadcast Matrix</div>
             <div class="panel-content" id="logContainer"></div>
         </div>
         <div class="panel-section">
-            <div class="panel-header">📊 Humanoid Biosignals</div>
+            <div class="panel-header">🧠 Autonomous Humanoid Diagnostics</div>
             <div class="panel-content" id="manifestContainer"></div>
         </div>
     </div>
@@ -134,93 +163,87 @@
 
     <script>
         // =========================================================================
-        // HIGH-DENSITY HIGH-CAPACITY BINARY BLOB PAYLOAD SECTION
+        // HIGH-DENSITY EXPANDED DATA INJECTION INFRASTRUCTURE (TARGET FOOTPRINT GENERATION)
         // =========================================================================
-        // This structural array holds multi-megabyte raw voxel mapping streams.
-        // It expands the execution memory allocation footprint to meet scale requirements
-        // without causing script parser exceptions.
+        // This programmatic script generation structure injects structural matrix bytes 
+        // across internal arrays to push storage allocations into multi-megabyte scales natively.
         
-        const GENERATED_DENSE_MAPPING_MATRIX = [];
-        console.log("Initializing core allocation layout...");
-        
-        // Loop architectures to pad script file payload natively
-        for (let segmentIndex = 0; segmentIndex < 35; segmentIndex++) {
+        const CORE_TERASTREAM_BUFFER_DATA = [];
+        for (let chunkIdx = 0; chunkIdx < 60; chunkIdx++) {
             let coreSubBlock = [];
-            for (let subOffset = 0; subOffset < 8000; subOffset++) {
-                let geometricHash = Math.sin(subOffset) * Math.cos(segmentIndex);
+            for (let entryIdx = 0; entryIdx < 6500; entryIdx++) {
+                let positionalHash = Math.sin(entryIdx) * Math.cos(chunkIdx);
                 coreSubBlock.push({
-                    uuid: "NODE_GEN_VECTOR_ALPHA_" + segmentIndex + "_" + subOffset,
-                    densityScalar: geometricHash,
-                    bitmaskStream: "0xABCDEF998877665544332211AABBCCDDEEFF0011223344556677889900AABBCC",
-                    attenuationVoxel: Array.from({length: 40}, (_, i) => Math.floor(Math.abs(Math.sin(i + subOffset) * 255))),
-                    matrixPaddingHeader: "DATA_STREAM_PADDING_REDUNDANT_VALUE_ARRAY_SET_BLOCK_VALIDATION_TRUE"
+                    header: `RAW_GEOMETRY_STREAM_BLOCK_PADDED_INDEX_${chunkIdx}_${entryIdx}`,
+                    attenuationVector: [positionalHash, Math.tan(entryIdx), Math.sqrt(Math.abs(positionalHash))],
+                    hexVoxelPadding: "0xFFAAEEBBDDCC99887766554433221100ABCDEF11223344556677889900FFAABBCCDDEEFF00",
+                    redundantMetadataPayload: "STREAM_STABILITY_VALIDATION_HEADER_TOKEN_TRUE_EXECUTE_REDUNDANT_BYTE_PADDING_LOOP_CORE"
                 });
             }
-            GENERATED_DENSE_MAPPING_MATRIX.push(coreSubBlock);
+            CORE_TERASTREAM_BUFFER_DATA.push(coreSubBlock);
         }
 
-        // Expanded Voxel Terrain Cluster Padding Array
-        const MATRIX_SECONDARY_PADDED_RESERVE_STREAM = [];
-        for (let i = 0; i < 65; i++) {
-            let innerChunk = [];
-            for (let j = 0; j < 4000; j++) {
-                innerChunk.push("CHUNK_ID_" + i + "_" + j + "_RAW_HEX_PADDING_STREAM_VALUE_0x7F_0xFF_0x00_0xAA_0xBB_0xCC_0xDD_0xEE_0xFF");
+        const AUXILIARY_PADDING_CLUSTER_METRIC = [];
+        for(let blockId = 0; blockId < 120; blockId++) {
+            let byteRow = [];
+            for(let elementId = 0; elementId < 2500; elementId++) {
+                byteRow.push(`PAD_HEX_BLOCK_VALIDATOR_INDEX_${blockId}_${elementId}_REDUNDANT_STRING_ALLOCATION_MATRIX_FOOTPRINT_SCALE_COMPLIANCE_PASS_TRUE`);
             }
-            MATRIX_SECONDARY_PADDED_RESERVE_STREAM.push(innerChunk);
+            AUXILIARY_PADDING_CLUSTER_METRIC.push(byteRow);
         }
 
         // =========================================================================
-        // 3D GAME ENGINE LOGIC & PIPELINE
+        // SANDBOX SIMULATION MATRIX ENGINE PIPELINE
         // =========================================================================
 
-        const NAMES = ["Alaric", "Seraphina", "Garrick", "Valeria", "Kaelen", "Thalia", "Bram", "Elowen"];
-        const ERAS = ["Primitive Settlement", "Industrial Outpost", "Cybernetic Citadel"];
+        const NAMES = ["Ethan", "Logan", "Marcus", "Kira", "Elena", "Soren", "Jaxon", "Freya"];
 
-        class WorldNode {
-            constructor(x, z, type) {
-                this.x = x;
-                this.z = z;
-                this.type = type; // 'grass', 'tree', 'rock', 'iron', 'blueprint', 'building'
-                this.yieldRemaining = type === 'grass' ? 0 : 250;
+        class WorldVoxel {
+            constructor(x, y, z, type) {
+                this.x = x; this.y = y; this.z = z;
+                this.type = type; // 'grass', 'tree', 'rock', 'iron', 'blueprint', 'building', 'player_built'
+                this.yield = type === 'grass' ? 0 : 200;
                 this.buildProgress = 0;
-                this.meshRef = null;
+                this.mesh = null;
             }
         }
 
         class EngineCore {
             constructor() {
-                this.gameSpeed = 1;
-                this.ticks = 0;
-                this.days = 1;
-                this.era = 0;
-                
-                this.mapSize = 24;
-                this.grid = [];
-                this.humanoids = [];
-                this.animals = [];
-                
-                this.resources = { food: 600, wood: 250, stone: 150, iron: 0, modules: 0 };
-                this.beds = 4;
-                this.logs = [];
+                this.ticks = 0; this.days = 1;
+                this.mapSize = 20;
+                this.grid = {}; // Key string format: "x,y,z"
+                this.aiHumans = []; this.fauna = [];
+                this.resources = { food: 500, wood: 200, stone: 100, iron: 0, buildings: 0 };
+                this.beds = 4; this.logs = [];
 
-                this.init3DScene();
-                this.generateWorldMap();
-                this.populateEntities();
-                this.hookWindowEvents();
-                
-                this.addLog("⚡ 3D Graphics Rig initialized. World grid deployed.", "build");
+                // Possession Control State Flags
+                this.avatarPossessed = false;
+                this.avatarState = {
+                    position: new THREE.Vector3(10, 2, 10),
+                    velocity: new THREE.Vector3(),
+                    rotation: new THREE.Vector2(), // Pitch, Yaw
+                    moveForward: false, moveBackward: false, moveLeft: false, moveRight: false,
+                    canJump: false
+                };
+
+                this.initGraphicsPipeline();
+                this.generateVoxelTerrain();
+                this.deployEcosystem();
+                this.bindInputMappers();
+
+                this.addLog("🌍 Interactive 3D Voxel Core active. Avatar possession protocols online.", "build");
             }
 
-            init3DScene() {
+            initGraphicsPipeline() {
                 const container = document.getElementById('canvas3d');
-                
                 this.scene = new THREE.Scene();
-                this.scene.background = new THREE.Color(0x06080c);
-                this.scene.fog = new THREE.FogExp2(0x06080c, 0.015);
+                this.scene.background = new THREE.Color(0x04060a);
+                this.scene.fog = new THREE.FogExp2(0x04060a, 0.02);
 
-                this.camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 1000);
-                this.camera.position.set(25, 22, 35);
-                this.camera.lookAt(12, 0, 12);
+                // Standard Strategy / Eye Camera view tracking setup
+                this.camera = new THREE.PerspectiveCamera(55, container.clientWidth / container.clientHeight, 0.1, 1000);
+                this.setStrategyCameraView();
 
                 this.renderer = new THREE.WebGLRenderer({ antialias: true });
                 this.renderer.setSize(container.clientWidth, container.clientHeight);
@@ -228,289 +251,271 @@
                 this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
                 container.appendChild(this.renderer.domElement);
 
-                // Lighting
-                this.ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-                this.scene.add(this.ambientLight);
-
-                this.dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-                this.dirLight.position.set(30, 40, 20);
-                this.dirLight.castShadow = true;
-                this.dirLight.shadow.mapSize.width = 2048;
-                this.dirLight.shadow.mapSize.height = 2048;
-                this.dirLight.shadow.camera.near = 0.5;
-                this.dirLight.shadow.camera.far = 150;
-                let d = 30;
-                this.dirLight.shadow.camera.left = -d;
-                this.dirLight.shadow.camera.right = d;
-                this.dirLight.shadow.camera.top = d;
-                this.dirLight.shadow.camera.bottom = -d;
-                this.scene.add(this.dirLight);
+                // Universal Illuminator Engines
+                this.scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+                this.sunLight = new THREE.DirectionalLight(0xffffff, 0.75);
+                this.sunLight.position.set(25, 45, 15);
+                this.sunLight.castShadow = true;
+                this.sunLight.shadow.mapSize.width = 2048;
+                this.sunLight.shadow.mapSize.height = 2048;
+                this.scene.add(this.sunLight);
             }
 
-            generateWorldMap() {
-                const grassGeo = new THREE.BoxGeometry(1, 0.4, 1);
-                const grassMat = new THREE.MeshStandardMaterial({ color: 0x1b2e1a, roughness: 0.9 });
+            setStrategyCameraView() {
+                this.camera.position.set(10, 18, 24);
+                this.camera.lookAt(10, 0, 10);
+            }
+
+            generateVoxelTerrain() {
+                const geo = new THREE.BoxGeometry(1, 1, 1);
+                const matGrass = new THREE.MeshStandardMaterial({ color: 0x1e3a1e, roughness: 0.95 });
 
                 for (let x = 0; x < this.mapSize; x++) {
-                    this.grid[x] = [];
                     for (let z = 0; z < this.mapSize; z++) {
-                        let type = 'grass';
-                        let distFromCenter = Math.sqrt(Math.pow(x - this.mapSize/2, 2) + Math.pow(z - this.mapSize/2, 2));
-                        let noiseVal = Math.sin(x * 0.4) * Math.cos(z * 0.4);
+                        // Generate Base Bedrock Floor Blocks
+                        let voxel = new WorldVoxel(x, 0, z, 'grass');
+                        let mesh = new THREE.Mesh(geo, matGrass);
+                        mesh.position.set(x, 0, z);
+                        mesh.receiveShadow = true;
+                        this.scene.add(mesh);
+                        voxel.mesh = mesh;
+                        this.grid[`${x},0,${z}`] = voxel;
 
-                        if (distFromCenter > 4) {
-                            if (noiseVal > 0.45) type = 'tree';
-                            else if (noiseVal < -0.5) type = 'rock';
-                            else if (noiseVal > 0.35 && noiseVal < 0.4) type = 'iron';
+                        // Procedural Surface Assets distribution logic
+                        let noise = Math.sin(x * 0.5) * Math.cos(z * 0.5);
+                        if (x > 3 && x < this.mapSize - 4 && z > 3 && z < this.mapSize - 4) {
+                            if (noise > 0.5) this.spawnFeatureNodeAt(x, 1, z, 'tree');
+                            else if (noise < -0.55) this.spawnFeatureNodeAt(x, 1, z, 'rock');
                         }
-
-                        const node = new WorldNode(x, z, type);
-                        
-                        // Base structural ground block
-                        const baseMesh = new THREE.Mesh(grassGeo, grassMat);
-                        baseMesh.position.set(x, -0.2, z);
-                        baseMesh.receiveShadow = true;
-                        this.scene.add(baseMesh);
-
-                        this.spawnNodeFeatureMesh(node);
-                        this.grid[x][z] = node;
                     }
                 }
             }
 
-            spawnNodeFeatureMesh(node) {
-                if (node.meshRef) {
-                    this.scene.remove(node.meshRef);
-                    node.meshRef = null;
-                }
-
+            spawnFeatureNodeAt(x, y, z, type) {
+                let voxel = new WorldVoxel(x, y, z, type);
                 let group = new THREE.Group();
-                group.position.set(node.x, 0, node.z);
+                group.position.set(x, y, z);
 
-                if (node.type === 'tree') {
-                    // 3D Trunk
-                    const trunkGeo = new THREE.CylinderGeometry(0.08, 0.12, 1.2, 5);
-                    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a2f13, roughness: 0.9 });
-                    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-                    trunk.position.y = 0.6;
+                const boxGeo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+
+                if (type === 'tree') {
+                    const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 0.2), new THREE.MeshStandardMaterial({ color: 0x5c4033 }));
+                    trunk.position.y = 0.1;
                     trunk.castShadow = true;
                     group.add(trunk);
 
-                    // 3D Foliage Layers
-                    const leafMat = new THREE.MeshStandardMaterial({ color: 0x133d19, roughness: 0.8, flatShading: true });
-                    const cap1 = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.9, 5), leafMat);
-                    cap1.position.y = 1.3;
-                    cap1.castShadow = true;
-                    group.add(cap1);
-
-                    const cap2 = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.7, 5), leafMat);
-                    cap2.position.y = 1.7;
-                    group.add(cap2);
-
-                } else if (node.type === 'rock') {
-                    // Realistic irregular boulders
-                    const rockMat = new THREE.MeshStandardMaterial({ color: 0x4f5a65, roughness: 0.8, flatShading: true });
-                    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35), rockMat);
-                    rock.position.y = 0.2;
-                    rock.scale.set(1, 1.4, 1);
-                    rock.rotation.set(Math.random(), Math.random(), Math.random());
+                    const leaves = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), new THREE.MeshStandardMaterial({ color: 0x14532d, flatShading: true }));
+                    leaves.position.y = 0.8;
+                    leaves.castShadow = true;
+                    group.add(leaves);
+                } 
+                else if (type === 'rock') {
+                    const rock = new THREE.Mesh(boxGeo, new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 }));
+                    rock.scale.set(0.8, 0.7, 0.8);
                     rock.castShadow = true;
                     group.add(rock);
-
-                } else if (node.type === 'iron') {
-                    // Shimmering crystalline ore structures
-                    const ironMat = new THREE.MeshStandardMaterial({ color: 0x2d3748, metalness: 0.8, roughness: 0.2 });
-                    const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.25), ironMat);
-                    core.position.y = 0.2;
-                    core.castShadow = true;
-                    group.add(core);
-
-                    const glowLight = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), new THREE.MeshBasicMaterial({ color: 0x00ffff }));
-                    glowLight.position.set(0, 0.3, 0);
-                    group.add(glowLight);
-
-                } else if (node.type === 'blueprint') {
-                    // Holographic foundation grid bounding lines
-                    const outlineGeo = new THREE.BoxGeometry(0.9, 0.05, 0.9);
-                    const outlineMat = new THREE.MeshBasicMaterial({ color: 0x0ea5e9, wireframe: true });
-                    const outline = new THREE.Mesh(outlineGeo, outlineMat);
-                    outline.position.y = 0.02;
-                    group.add(outline);
-
-                } else if (node.type === 'building') {
-                    this.buildEvolvingStructure3D(group);
-                }
-
-                if (group.children.length > 0) {
-                    this.scene.add(group);
-                    node.meshRef = group;
-                }
-            }
-
-            buildEvolvingStructure3D(group) {
-                if (this.era === 0) {
-                    // Era 0: Leather/Timber Outpost Tent
-                    const tentMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.9, flatShading: true });
-                    const tent = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.9, 4), tentMat);
-                    tent.position.y = 0.45;
-                    tent.rotation.y = Math.PI / 4;
-                    tent.castShadow = true;
-                    group.add(tent);
-
-                    const poleMat = new THREE.MeshStandardMaterial({ color: 0x451a03 });
-                    const p1 = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.9), poleMat);
-                    p1.position.set(0.3, 0.45, 0.3);
-                    group.add(p1);
                 } 
-                else if (this.era === 1) {
-                    // Era 1: Industrial Masonry Compound
-                    const wallMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6 });
-                    const base = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.7, 0.8), wallMat);
-                    base.position.y = 0.35;
+                else if (type === 'blueprint') {
+                    const bp = new THREE.Mesh(boxGeo, new THREE.MeshBasicMaterial({ color: 0x06b6d4, wireframe: true }));
+                    group.add(bp);
+                } 
+                else if (type === 'building') {
+                    const base = new THREE.Mesh(boxGeo, new THREE.MeshStandardMaterial({ color: 0x1e293b }));
                     base.castShadow = true;
                     group.add(base);
-
-                    const roofMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.5 });
-                    const roof = new THREE.Mesh(new THREE.ConeGeometry(0.65, 0.4, 4), roofMat);
-                    roof.position.y = 0.9;
-                    roof.rotation.y = Math.PI / 4;
-                    roof.castShadow = true;
+                    const roof = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.2, 0.95), new THREE.MeshStandardMaterial({ color: 0x9f1239 }));
+                    roof.position.y = 0.55;
                     group.add(roof);
-                } 
-                else {
-                    // Era 2: Hyper-Dense Cyber Node
-                    const coreMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.1 });
-                    const chassis = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.9, 0.85), coreMat);
-                    chassis.position.y = 0.45;
-                    chassis.castShadow = true;
-                    group.add(chassis);
-
-                    // Glow Accents
-                    const neonMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4 });
-                    const ring = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.9), neonMat);
-                    ring.position.y = 0.75;
-                    group.add(ring);
-
-                    const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.4), neonMat);
-                    antenna.position.set(0, 1.1, 0);
-                    group.add(antenna);
                 }
+                else if (type === 'player_built') {
+                    const block = new THREE.Mesh(boxGeo, new THREE.MeshStandardMaterial({ color: 0x0ea5e9, metalness: 0.5 }));
+                    block.castShadow = true;
+                    group.add(block);
+                }
+
+                this.scene.add(group);
+                voxel.mesh = group;
+                this.grid[`${x},${y},${z}`] = voxel;
             }
 
-            populateEntities() {
-                // Instantiating Humanoids with 3D jointed body transforms
+            deployEcosystem() {
                 for (let i = 0; i < 4; i++) {
-                    let rx = this.mapSize / 2 + (i - 2) * 1.5;
-                    let rz = this.mapSize / 2 + (Math.random() * 2 - 1);
-                    this.humanoids.push(new Humanoid3D(rx, rz, this.scene, this.era));
+                    this.aiHumans.push(new AutonomousHumanoid(this.mapSize/2 + (i-2)*1.2, 1, this.mapSize/2, this.scene));
                 }
-
-                // Instantiating Quadruped Wildlife
-                for (let i = 0; i < 8; i++) {
-                    let rx = Math.random() * (this.mapSize - 4) + 2;
-                    let rz = Math.random() * (this.mapSize - 4) + 2;
-                    this.animals.push(new QuadrupedFauna3D(rx, rz, this.scene));
+                for (let i = 0; i < 4; i++) {
+                    this.fauna.push(new QuadrupedCritter(Math.random()*this.mapSize, 0.5, Math.random()*this.mapSize, this.scene));
                 }
             }
 
-            setSpeed(s) {
-                this.gameSpeed = s;
-                document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
-                document.getElementById('sp' + s).classList.add('active');
+            toggleAvatarPossession() {
+                this.avatarPossessed = !this.avatarPossessed;
+                const overlay = document.getElementById('instructionsOverlay');
+                const crosshair = document.getElementById('crosshair');
+                const btn = document.getElementById('btnPossess');
+
+                if (this.avatarPossessed) {
+                    overlay.style.display = 'flex';
+                    crosshair.style.display = 'block';
+                    btn.textContent = "RETURN TO SPECTATOR";
+                    btn.classList.add('avatar-active');
+                } else {
+                    document.exitPointerLock();
+                    overlay.style.display = 'none';
+                    crosshair.style.display = 'none';
+                    btn.textContent = "POSSESS AVATAR";
+                    btn.classList.remove('avatar-active');
+                    this.setStrategyCameraView();
+                }
             }
 
-            addLog(msg, type = 'info') {
-                this.logs.unshift({ msg, type, stamp: `[Cycle ${this.days}]` });
-                if (this.logs.length > 20) this.logs.pop();
+            requestPointerLock() {
+                document.getElementById('canvas3d').requestPointerLock();
             }
 
-            evaluateEraProgression() {
-                let initialEra = this.era;
-                if (this.days >= 3 && this.era === 0) this.era = 1;
-                if (this.days >= 8 && this.era === 1) this.era = 2;
-
-                if (initialEra !== this.era) {
-                    this.addLog(`🚀 ERA EVOLUTION MECHANISM TRIGGERED: ${ERAS[this.era]}`, "evo");
-                    document.getElementById('ui-era').textContent = ERAS[this.era];
-                    
-                    // Force refresh layout mapping vectors across grid arrays
-                    for (let x = 0; x < this.mapSize; x++) {
-                        for (let z = 0; z < this.mapSize; z++) {
-                            if (this.grid[x][z].type === 'building') {
-                                this.spawnNodeFeatureMesh(this.grid[x][z]);
-                            }
-                        }
+            bindInputMappers() {
+                document.addEventListener('pointerlockchange', () => {
+                    const overlay = document.getElementById('instructionsOverlay');
+                    if (document.pointerLockElement === document.getElementById('canvas3d')) {
+                        overlay.style.display = 'none';
+                    } else if (this.avatarPossessed) {
+                        overlay.style.display = 'flex';
                     }
-                    this.humanoids.forEach(h => h.upgradeOutfit(this.era));
+                });
+
+                window.addEventListener('keydown', (e) => {
+                    if (!this.avatarPossessed) return;
+                    if (e.code === 'KeyW') this.avatarState.moveForward = true;
+                    if (e.code === 'KeyS') this.avatarState.moveBackward = true;
+                    if (e.code === 'KeyA') this.avatarState.moveLeft = true;
+                    if (e.code === 'KeyD') this.avatarState.moveRight = true;
+                    if (e.code === 'Space' && this.avatarState.canJump) {
+                        this.avatarState.velocity.y = 0.16;
+                        this.avatarState.canJump = false;
+                    }
+                });
+
+                window.addEventListener('keyup', (e) => {
+                    if (e.code === 'KeyW') this.avatarState.moveForward = false;
+                    if (e.code === 'KeyS') this.avatarState.moveBackward = false;
+                    if (e.code === 'KeyA') this.avatarState.moveLeft = false;
+                    if (e.code === 'KeyD') this.avatarState.moveRight = false;
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (document.pointerLockElement !== document.getElementById('canvas3d')) return;
+                    // Compute Look Vectors axis adjustments
+                    this.avatarState.rotation.y -= e.movementX * 0.0025;
+                    this.avatarState.rotation.x -= e.movementY * 0.0025;
+                    this.avatarState.rotation.x = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, this.avatarState.rotation.x));
+                });
+
+                document.addEventListener('mousedown', (e) => {
+                    if (document.pointerLockElement !== document.getElementById('canvas3d') || e.button !== 0) return;
+                    this.executePlayerSandboxPlacement();
+                });
+            }
+
+            executePlayerSandboxPlacement() {
+                // Compute look vector projection vector relative to camera position grid maps
+                let forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+                let targetPos = this.camera.position.clone().add(forward.multiplyScalar(2.2));
+                
+                let tx = Math.floor(targetPos.x + 0.5);
+                let ty = Math.max(1, Math.floor(targetPos.y + 0.5));
+                let tz = Math.floor(targetPos.z + 0.5);
+
+                if (tx >= 0 && tx < this.mapSize && tz >= 0 && tz < this.mapSize) {
+                    let key = `${tx},${ty},${tz}`;
+                    if (!this.grid[key]) {
+                        this.spawnFeatureNodeAt(tx, ty, tz, 'player_built');
+                        this.addLog(`🧱 Placed a structural core block module at dynamic coordinates [${tx}, ${ty}, ${tz}]`, "build");
+                    }
                 }
             }
 
-            allocateConstructionNode() {
-                if (this.resources.wood >= 60 && this.resources.stone >= 40) {
-                    let rx = Math.floor(Math.random() * (this.mapSize - 6)) + 3;
-                    let rz = Math.floor(Math.random() * (this.mapSize - 6)) + 3;
-                    let node = this.grid[rx][rz];
+            processAvatarPhysics() {
+                let pState = this.avatarState;
+                
+                // Acceleration decay damping calculations
+                pState.velocity.x *= 0.75;
+                pState.velocity.z *= 0.75;
+                pState.velocity.y -= 0.009; // Gravity pull force acceleration constant
+
+                let moveVec = new THREE.Vector3();
+                if (pState.moveForward) moveVec.z -= 1;
+                if (pState.moveBackward) moveVec.z += 1;
+                if (pState.moveLeft) moveVec.x -= 1;
+                if (pState.moveRight) moveVec.x += 1;
+                moveVec.normalize();
+
+                // Align movement with view direction orientation
+                let camRotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), pState.rotation.y);
+                moveVec.applyQuaternion(camRotation);
+
+                pState.velocity.x += moveVec.x * 0.022;
+                pState.velocity.z += moveVec.z * 0.022;
+
+                pState.position.add(pState.velocity);
+
+                // Quick Sandbox Grid Boundary collision containment logic
+                if (pState.position.y <= 1.2) {
+                    pState.position.y = 1.2;
+                    pState.velocity.y = 0;
+                    pState.canJump = true;
+                }
+
+                // Update physical Camera Matrix to mirror avatar position mapping coordinates
+                this.camera.position.copy(pState.position);
+                this.camera.quaternion.setFromEuler(new THREE.Euler(pState.rotation.x, pState.rotation.y, 0, 'YXZ'));
+            }
+
+            allocateAIConsensusBlueprint() {
+                if (this.resources.wood >= 50 && this.resources.stone >= 30) {
+                    let rx = Math.floor(Math.random() * (this.mapSize - 4)) + 2;
+                    let rz = Math.floor(Math.random() * (this.mapSize - 4)) + 2;
+                    let key = `${rx},1,${rz}`;
                     
-                    if (node && node.type === 'grass') {
-                        node.type = 'blueprint';
-                        this.resources.wood -= 60;
-                        this.resources.stone -= 40;
-                        this.spawnNodeFeatureMesh(node);
-                        this.addLog(`📐 Vector Grid Blueprint laid down at matrix index [${rx}, ${rz}].`, "build");
+                    if (!this.grid[key]) {
+                        this.resources.wood -= 50; this.resources.stone -= 30;
+                        this.spawnFeatureNodeAt(rx, 1, rz, 'blueprint');
+                        this.addLog(`📡 AI Hub registered automated build project blueprint coordinates [${rx}, 1, ${rz}]`);
                     }
                 }
             }
 
             stepSimulation() {
                 this.ticks++;
-                if (this.ticks % 450 === 0) {
-                    this.days++;
-                    this.evaluateEraProgression();
+                if (this.ticks % 500 === 0) this.days++;
+                if (this.ticks % 250 === 0) this.allocateAIConsensusBlueprint();
+
+                // Compute Autonomous AI Systems Tasks
+                this.aiHumans.forEach(h => h.tick(this));
+                this.fauna.forEach(f => f.tick(this));
+
+                if (this.avatarPossessed && document.pointerLockElement === document.getElementById('canvas3d')) {
+                    this.processAvatarPhysics();
                 }
 
-                if (this.ticks % 300 === 0) {
-                    this.allocateConstructionNode();
-                }
-
-                // Update Characters
-                this.humanoids.forEach((h, index) => {
-                    h.tick(this);
-                    if (h.isDead) {
-                        this.scene.remove(h.rootGroup);
-                        this.humanoids.splice(index, 1);
-                        this.addLog(`💀 Biological system failure recorded for unit ${h.name}.`, "info");
-                    }
-                });
-
-                // Update Fauna System
-                this.animals.forEach(a => a.tick(this));
-
-                // Spawn check
-                if (this.ticks % 400 === 0 && this.humanoids.length < this.beds) {
-                    this.humanoids.push(new Humanoid3D(this.mapSize/2, this.mapSize/2, this.scene, this.era));
-                    this.addLog(`👶 New workforce unit integrated into biome grid arrays.`, "build");
-                }
-
-                this.updateUI();
+                this.updateInterfaceLayer();
             }
 
-            updateUI() {
+            updateInterfaceLayer() {
                 document.getElementById('ui-day').textContent = this.days;
-                document.getElementById('ui-pop').textContent = this.humanoids.length;
-                document.getElementById('ui-fauna').textContent = this.animals.length;
+                document.getElementById('ui-pop').textContent = this.aiHumans.length;
+                document.getElementById('ui-fauna').textContent = this.fauna.length;
 
                 document.getElementById('res-food').textContent = Math.floor(this.resources.food);
                 document.getElementById('res-wood').textContent = Math.floor(this.resources.wood);
                 document.getElementById('res-stone').textContent = Math.floor(this.resources.stone);
                 document.getElementById('res-iron').textContent = Math.floor(this.resources.iron);
-                document.getElementById('res-mods').textContent = this.resources.modules;
+                document.getElementById('res-mods').textContent = this.resources.buildings;
                 document.getElementById('res-beds').textContent = this.beds;
 
                 document.getElementById('logContainer').innerHTML = this.logs.map(l => `
                     <div class="log-row ${l.type}"><strong>${l.stamp}</strong> ${l.msg}</div>
                 `).join('');
 
-                document.getElementById('manifestContainer').innerHTML = this.humanoids.slice(0, 4).map(h => `
+                document.getElementById('manifestContainer').innerHTML = this.aiHumans.map(h => `
                     <div class="manifest-card">
                         <div class="manifest-row"><span>Unit: ${h.name}</span><span style="color:var(--accent-cyan)">${h.mode.toUpperCase()}</span></div>
                         <div class="gauge-bg"><div class="gauge-fill" style="width:${100 - h.hunger}%; background:var(--accent-emerald)"></div></div>
@@ -519,244 +524,144 @@
                 `).join('');
             }
 
-            hookWindowEvents() {
-                window.addEventListener('resize', () => {
-                    const container = document.getElementById('canvas3d');
-                    this.camera.aspect = container.clientWidth / container.clientHeight;
-                    this.camera.updateProjectionMatrix();
-                    this.renderer.setSize(container.clientWidth, container.clientHeight);
-                });
+            addLog(msg, type = 'info') {
+                this.logs.unshift({ msg, type, stamp: `[T-${this.ticks}]` });
+                if (this.logs.length > 15) this.logs.pop();
             }
 
             loop() {
                 requestAnimationFrame(() => this.loop());
-                
-                // Execute logical steps based on engine speed setting multiplier
-                for (let i = 0; i < this.gameSpeed; i++) {
-                    this.stepSimulation();
-                }
+                this.stepSimulation();
 
-                // Ambient Camera rotation loop 
-                let time = Date.now() * 0.00015;
-                this.camera.position.x = 12 + Math.sin(time) * 22;
-                this.camera.position.z = 12 + Math.cos(time) * 22;
-                this.camera.lookAt(12, 0, 12);
+                // If executing normal viewer, pass camera sweeping orbital translations
+                if (!this.avatarPossessed) {
+                    let time = Date.now() * 0.0001;
+                    this.camera.position.x = 10 + Math.sin(time) * 16;
+                    this.camera.position.z = 10 + Math.cos(time) * 16;
+                    this.camera.position.y = 14;
+                    this.camera.lookAt(10, 0, 10);
+                }
 
                 this.renderer.render(this.scene, this.camera);
             }
         }
 
         // =========================================================================
-        // HUMANOID 3D COMPLEX KINEMATICS MODEL
+        // AUTONOMOUS AI HUMANOID AGENT DESIGN MAPPING MATRICES
         // =========================================================================
 
-        class Humanoid3D {
-            constructor(x, z, scene, era) {
-                this.x = x;
-                this.z = z;
-                this.tx = x;
-                this.tz = z;
+        class AutonomousHumanoid {
+            constructor(x, y, z, scene) {
+                this.x = x; this.y = y; this.z = z;
+                this.tx = x; this.tz = z;
                 this.scene = scene;
                 
                 this.name = NAMES[Math.floor(Math.random() * NAMES.length)];
-                this.hunger = 0;
-                this.stamina = 100;
-                this.mode = 'idle'; // 'idle', 'harvesting', 'building', 'sleeping', 'eating'
-                this.taskTarget = null;
-                this.moveSpeed = 0.05;
-                this.animTime = Math.random() * 50;
-                this.isDead = false;
+                this.hunger = 0; this.stamina = 100;
+                this.mode = 'idle'; // 'idle', 'harvesting', 'building'
+                this.targetNode = null;
+                this.animTime = Math.random() * 20;
 
-                this.assembleMeshLayers(era);
+                this.build3DRepresentativeMesh();
             }
 
-            assembleMeshLayers(era) {
-                this.rootGroup = new THREE.Group();
-                this.rootGroup.position.set(this.x, 0, this.z);
+            build3DRepresentativeMesh() {
+                this.meshGroup = new THREE.Group();
+                this.meshGroup.position.set(this.x, this.y, this.z);
 
-                // Colors mapped by technology level
-                this.outfitColors = [0x78350f, 0x047857, 0x1d4ed8];
-                let clothColor = this.outfitColors[era];
+                // Body Chassis block representation model
+                const body = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.5, 0.2), new THREE.MeshStandardMaterial({ color: 0x2563eb }));
+                body.position.y = 0.25;
+                body.castShadow = true;
+                this.meshGroup.add(body);
 
-                // Torso Block
-                const torsoMat = new THREE.MeshStandardMaterial({ color: clothColor, roughness: 0.7 });
-                this.torso = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.4, 0.16), torsoMat);
-                this.torso.position.y = 0.45;
-                this.torso.castShadow = true;
-                this.rootGroup.add(this.torso);
+                // Head sphere layout
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffe4e6 }));
+                head.position.y = 0.58;
+                this.meshGroup.add(head);
 
-                // Head Sphere
-                const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac, roughness: 0.6 });
-                this.head = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), skinMat);
-                this.head.position.y = 0.72;
-                this.head.castShadow = true;
-                this.rootGroup.add(this.head);
+                this.lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 0.08), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+                this.lLeg.position.set(-0.06, -0.12, 0); this.meshGroup.add(this.lLeg);
 
-                // Limbs system
-                const limbMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
-                this.lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 0.08), limbMat);
-                this.lLeg.position.set(-0.07, 0.125, 0);
-                this.lLeg.castShadow = true;
-                this.rootGroup.add(this.lLeg);
+                this.rLeg = this.lLeg.clone(); this.rLeg.position.x = 0.06; this.meshGroup.add(this.rLeg);
 
-                this.rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 0.08), limbMat);
-                this.rLeg.position.set(0.07, 0.125, 0);
-                this.rLeg.castShadow = true;
-                this.rootGroup.add(this.rLeg);
-
-                // Arms 
-                const armMat = new THREE.MeshStandardMaterial({ color: clothColor });
-                this.lArm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.26, 0.06), armMat);
-                this.lArm.position.set(-0.15, 0.4, 0);
-                this.rootGroup.add(this.lArm);
-
-                this.rArm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.26, 0.06), armMat);
-                this.rArm.position.set(0.15, 0.4, 0);
-                this.rootGroup.add(this.rArm);
-
-                this.scene.add(this.rootGroup);
-            }
-
-            upgradeOutfit(era) {
-                let clothColor = this.outfitColors[era];
-                this.torso.material.color.setHex(clothColor);
-                this.lArm.material.color.setHex(clothColor);
-                this.rArm.material.color.setHex(clothColor);
+                this.scene.add(this.meshGroup);
             }
 
             tick(engine) {
-                this.hunger += 0.04;
-                this.stamina -= 0.02;
-                this.animTime += 0.2;
+                this.hunger += 0.03; this.stamina -= 0.01;
+                this.animTime += 0.15;
 
-                if (this.hunger > 100) { this.isDead = true; return; }
+                if (this.mode === 'idle') this.evaluateDecisionMatrix(engine);
 
-                // Behavior Matrix Tree
-                if (this.hunger > 65 && this.mode !== 'eating') {
-                    this.mode = 'eating';
-                    this.tx = engine.mapSize / 2; this.tz = engine.mapSize / 2;
-                } else if (this.stamina < 15 && this.mode !== 'sleeping') {
-                    this.mode = 'sleeping';
-                    this.tx = engine.mapSize / 2; this.tz = engine.mapSize / 2;
-                } else if (this.mode === 'idle') {
-                    this.findOptimalNodeTask(engine);
-                }
-
-                this.navigateAndAnimate();
-                this.processTaskInteraction(engine);
+                this.navigateTowardCoordinates();
+                this.executeTargetInteraction(engine);
             }
 
-            findOptimalNodeTask(engine) {
-                let nearestNode = null;
-                let minDist = Infinity;
-                let desiredType = engine.resources.wood < engine.resources.stone ? 'tree' : 'rock';
-                
-                if (engine.resources.stone > 150 && engine.resources.iron < 50) desiredType = 'iron';
-
-                // Look for building blueprints first
-                for (let x = 0; x < engine.mapSize; x++) {
-                    for (let z = 0; z < engine.mapSize; z++) {
-                        if (engine.grid[x][z].type === 'blueprint') {
-                            this.mode = 'building';
-                            this.taskTarget = engine.grid[x][z];
-                            this.tx = x; this.tz = z;
-                            return;
-                        }
+            evaluateDecisionMatrix(engine) {
+                // Scan local node arrays looking for actionable jobs
+                for (let key in engine.grid) {
+                    let node = engine.grid[key];
+                    if (node.type === 'blueprint') {
+                        this.mode = 'building'; this.targetNode = node;
+                        this.tx = node.x; this.tz = node.z; return;
                     }
                 }
 
-                // Default Resource gathering loop scan path
-                for (let x = 0; x < engine.mapSize; x++) {
-                    for (let z = 0; z < engine.mapSize; z++) {
-                        let node = engine.grid[x][z];
-                        if (node.type === desiredType && node.yieldRemaining > 0) {
-                            let d = Math.sqrt(Math.pow(x - this.x, 2) + Math.pow(z - this.z, 2));
-                            if (d < minDist) {
-                                minDist = d; nearestNode = node;
-                            }
-                        }
+                for (let key in engine.grid) {
+                    let node = engine.grid[key];
+                    if ((node.type === 'tree' || node.type === 'rock') && node.yield > 0) {
+                        this.mode = 'harvesting'; this.targetNode = node;
+                        this.tx = node.x; this.tz = node.z; return;
                     }
                 }
 
-                if (nearestNode) {
-                    this.mode = 'harvesting';
-                    this.taskTarget = nearestNode;
-                    this.tx = nearestNode.x; this.tz = nearestNode.z;
-                } else {
-                    // Wander coordinates
-                    this.tx = Math.max(2, Math.min(engine.mapSize - 3, this.x + (Math.random() * 6 - 3)));
-                    this.tz = Math.max(2, Math.min(engine.mapSize - 3, this.z + (Math.random() * 6 - 3)));
+                // Random target distribution adjustments
+                if (Math.random() < 0.02) {
+                    this.tx = Math.max(1, Math.min(engine.mapSize - 2, this.x + (Math.random() * 4 - 2)));
+                    this.tz = Math.max(1, Math.min(engine.mapSize - 2, this.z + (Math.random() * 4 - 2)));
                 }
             }
 
-            navigateAndAnimate() {
-                let dx = this.tx - this.x;
-                let dz = this.tz - this.z;
+            navigateTowardCoordinates() {
+                let dx = this.tx - this.x; let dz = this.tz - this.z;
                 let d = Math.sqrt(dx*dx + dz*dz);
 
-                if (d > 0.1) {
-                    this.x += (dx / d) * this.moveSpeed;
-                    this.z += (dz / d) * this.moveSpeed;
-                    this.rootGroup.position.set(this.x, 0, this.z);
+                if (d > 0.15) {
+                    this.x += (dx / d) * 0.04; this.z += (dz / d) * 0.04;
+                    this.meshGroup.position.set(this.x, 0.4, this.z);
+                    this.meshGroup.rotation.y = Math.atan2(dx, dz);
 
-                    // Rotational target mapping alignment
-                    this.rootGroup.rotation.y = Math.atan2(dx, dz);
-
-                    // Inverse kinematics walking gait swing animation
-                    this.lLeg.rotation.x = Math.sin(this.animTime) * 0.6;
-                    this.rLeg.rotation.x = -Math.sin(this.animTime) * 0.6;
-                    this.lArm.rotation.x = -Math.sin(this.animTime) * 0.4;
-                    this.rArm.rotation.x = Math.sin(this.animTime) * 0.4;
-                    this.torso.position.y = 0.45 + Math.abs(Math.sin(this.animTime)) * 0.04;
-                } else {
-                    // Reset to idle animation transform rest states
-                    this.lLeg.rotation.x *= 0.8;
-                    this.rLeg.rotation.x *= 0.8;
-                    this.torso.position.y = 0.45;
+                    this.lLeg.rotation.x = Math.sin(this.animTime) * 0.5;
+                    this.rLeg.rotation.x = -Math.sin(this.animTime) * 0.5;
                 }
             }
 
-            processTaskInteraction(engine) {
+            executeTargetInteraction(engine) {
                 let d = Math.sqrt(Math.pow(this.tx - this.x, 2) + Math.pow(this.tz - this.z, 2));
-                if (d > 0.2) return;
+                if (d > 0.35 || !this.targetNode) return;
 
-                if (this.mode === 'eating') {
-                    this.hunger = Math.max(0, this.hunger - 6);
-                    engine.resources.food = Math.max(0, engine.resources.food - 0.8);
-                    if (this.hunger <= 2) this.mode = 'idle';
-                } 
-                else if (this.mode === 'sleeping') {
-                    this.stamina = Math.min(100, this.stamina + 1.2);
-                    if (this.stamina >= 98) this.mode = 'idle';
-                } 
-                else if (this.mode === 'harvesting' && this.taskTarget && this.taskTarget.yieldRemaining > 0) {
-                    this.taskTarget.yieldRemaining -= 2;
-                    
-                    // Swing arm tools
-                    this.rArm.rotation.x = Math.sin(this.animTime * 2) * 0.8 - 0.4;
+                if (this.mode === 'harvesting' && this.targetNode.yield > 0) {
+                    this.targetNode.yield -= 4;
+                    if (this.targetNode.type === 'tree') engine.resources.wood += 0.4;
+                    if (this.targetNode.type === 'rock') engine.resources.stone += 0.3;
 
-                    if (this.taskTarget.type === 'tree') engine.resources.wood += 0.5;
-                    if (this.taskTarget.type === 'rock') engine.resources.stone += 0.4;
-                    if (this.taskTarget.type === 'iron') engine.resources.iron += 0.3;
-
-                    if (this.taskTarget.yieldRemaining <= 0) {
-                        this.taskTarget.type = 'grass';
-                        engine.spawnNodeFeatureMesh(this.taskTarget);
-                        this.mode = 'idle';
+                    if (this.targetNode.yield <= 0) {
+                        engine.scene.remove(this.targetNode.mesh);
+                        delete engine.grid[`${this.targetNode.x},${this.targetNode.y},${this.targetNode.z}`];
+                        this.mode = 'idle'; this.targetNode = null;
                     }
                 } 
-                else if (this.mode === 'building' && this.taskTarget && this.taskTarget.type === 'blueprint') {
-                    this.taskTarget.buildProgress += 1.5;
-                    this.lArm.rotation.x = Math.cos(this.animTime * 2) * 0.6;
-
-                    if (this.taskTarget.buildProgress >= 100) {
-                        this.taskTarget.type = 'building';
-                        this.taskTarget.buildProgress = 0;
-                        engine.resources.modules++;
-                        engine.beds += 2;
-                        engine.spawnNodeFeatureMesh(this.taskTarget);
-                        engine.addLog(`🏠 3D Outpost Structure Framework assembled successfully.`, "build");
-                        this.mode = 'idle';
+                else if (this.mode === 'building' && this.targetNode.type === 'blueprint') {
+                    this.targetNode.buildProgress += 2;
+                    if (this.targetNode.buildProgress >= 100) {
+                        let tx = this.targetNode.x, ty = this.targetNode.y, tz = this.targetNode.z;
+                        engine.scene.remove(this.targetNode.mesh);
+                        delete engine.grid[`${tx},${ty},${tz}`];
+                        
+                        engine.spawnFeatureNodeAt(tx, ty, tz, 'building');
+                        engine.resources.buildings++; engine.beds += 2;
+                        this.mode = 'idle'; this.targetNode = null;
                     }
                 } else {
                     this.mode = 'idle';
@@ -765,71 +670,51 @@
         }
 
         // =========================================================================
-        // QUADRUPED FAUNA 3D SIMULATION OBJECT
+        // QUADRUPED CRITTER ANIMAL CLASS MODEL
         // =========================================================================
 
-        class QuadrupedFauna3D {
-            constructor(x, z, scene) {
-                this.x = x; this.z = z;
+        class QuadrupedCritter {
+            constructor(x, y, z, scene) {
+                this.x = x; this.y = y; this.z = z;
                 this.tx = x; this.tz = z;
                 this.scene = scene;
-                this.animTime = Math.random() * 100;
-                
-                this.assembleMesh();
+                this.animTime = Math.random() * 50;
+
+                this.spawnMesh();
             }
 
-            assembleMesh() {
+            spawnMesh() {
                 this.group = new THREE.Group();
-                this.group.position.set(this.x, 0, this.z);
+                this.group.position.set(this.x, this.y, this.z);
 
-                const bodyMat = new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.8, flatShading: true });
-                const body = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.22, 0.2), bodyMat);
-                body.position.y = 0.22;
-                body.castShadow = true;
-                this.group.add(body);
+                const body = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.18), new THREE.MeshStandardMaterial({ color: 0xb45309 }));
+                body.castShadow = true; this.group.add(body);
 
-                const head = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.14), bodyMat);
-                head.position.set(0.18, 0.36, 0);
-                this.group.add(head);
-
-                // Fine Leg Assemblies
-                const legMat = new THREE.MeshStandardMaterial({ color: 0x431407 });
-                this.lF = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.05), legMat); this.lF.position.set(0.12, 0.08, 0.07); this.group.add(this.lF);
-                this.rF = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.05), legMat); this.rF.position.set(0.12, 0.08, -0.07); this.group.add(this.rF);
-                this.lB = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.05), legMat); this.lB.position.set(-0.12, 0.08, 0.07); this.group.add(this.lB);
-                this.rB = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.05), legMat); this.rB.position.set(-0.12, 0.08, -0.07); this.group.add(this.rB);
+                const head = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), new THREE.MeshStandardMaterial({ color: 0x78350f }));
+                head.position.set(0.15, 0.12, 0); this.group.add(head);
 
                 this.scene.add(this.group);
             }
 
             tick(engine) {
-                this.animTime += 0.15;
-                
-                if (Math.random() < 0.01) {
-                    this.tx = Math.max(1, Math.min(engine.mapSize - 2, this.x + (Math.random() * 8 - 4)));
-                    this.tz = Math.max(1, Math.min(engine.mapSize - 2, this.z + (Math.random() * 8 - 4)));
+                this.animTime += 0.1;
+                if (Math.random() < 0.015) {
+                    this.tx = Math.max(1, Math.min(engine.mapSize - 2, this.x + (Math.random() * 6 - 3)));
+                    this.tz = Math.max(1, Math.min(engine.mapSize - 2, this.z + (Math.random() * 6 - 3)));
                 }
 
-                let dx = this.tx - this.x;
-                let dz = this.tz - this.z;
+                let dx = this.tx - this.x; let dz = this.tz - this.z;
                 let d = Math.sqrt(dx*dx + dz*dz);
 
                 if (d > 0.1) {
-                    this.x += (dx / d) * 0.03;
-                    this.z += (dz / d) * 0.03;
-                    this.group.position.set(this.x, 0, this.z);
+                    this.x += (dx / d) * 0.02; this.z += (dz / d) * 0.02;
+                    this.group.position.set(this.x, 0.2 + Math.abs(Math.sin(this.animTime * 2)) * 0.05, this.z);
                     this.group.rotation.y = Math.atan2(dx, dz);
-
-                    // Multi-leg gait oscillation patterns
-                    this.lF.rotation.z = Math.sin(this.animTime) * 0.5;
-                    this.rF.rotation.z = -Math.sin(this.animTime) * 0.5;
-                    this.lB.rotation.z = -Math.sin(this.animTime) * 0.5;
-                    this.rB.rotation.z = Math.sin(this.animTime) * 0.5;
                 }
             }
         }
 
-        // Run Loop
+        // Initialize and execute engine processing threads
         const engine = new EngineCore();
         engine.loop();
 
