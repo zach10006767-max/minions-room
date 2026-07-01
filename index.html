@@ -3,93 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minion Survival Simulation - RimWorld/Sims Hybrid</title>
+    <title>Aetheria Settlement Engine v2026.4</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-main: #0a0b10;
+            --bg-panel: rgba(18, 20, 29, 0.75);
+            --border-glow: rgba(52, 152, 219, 0.2);
+            --accent-blue: #38bdf8;
+            --accent-green: #34d399;
+            --accent-amber: #fbbf24;
+            --accent-rose: #f87171;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --font-sans: 'Plus Jakarta Sans', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            user-select: none;
         }
 
         body {
-            font-family: 'Courier New', monospace;
-            background: #1a1a1a;
-            color: #e0e0e0;
+            font-family: var(--font-sans);
+            background: var(--bg-main);
+            color: var(--text-primary);
             height: 100vh;
             overflow: hidden;
             display: flex;
+            backdrop-filter: blur(20px);
+        }
+
+        /* Ambient background grid */
+        body::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(rgba(255,255,255,0.01) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.01) 1px, transparent 1px);
+            background-size: 100px 100px;
+            z-index: -1;
         }
 
         #gameViewport {
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: #2a2a2a;
-            border-right: 2px solid #444;
+            position: relative;
+            height: 100%;
         }
 
         #topBar {
-            background: #1a1a1a;
-            border-bottom: 2px solid #444;
-            padding: 10px 15px;
+            background: linear-gradient(to bottom, rgba(10, 11, 16, 0.95), rgba(10, 11, 16, 0.8));
+            border-bottom: 1px solid var(--border-glow);
+            padding: 16px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
+            z-index: 10;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
         }
 
         .stat-display {
             display: flex;
-            gap: 20px;
-            font-size: 12px;
-            flex-wrap: wrap;
+            gap: 28px;
         }
 
         .stat-item {
             display: flex;
-            gap: 8px;
-            align-items: center;
+            flex-direction: column;
+            gap: 2px;
         }
 
         .stat-label {
-            color: #f39c12;
-            font-weight: bold;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
         }
 
         .stat-value {
-            color: #3498db;
-            min-width: 50px;
+            font-family: var(--font-mono);
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent-blue);
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
         }
 
         #canvasContainer {
             flex: 1;
-            overflow: auto;
-            background: #000;
+            position: relative;
+            background: #0d0f16;
+            overflow: hidden;
         }
 
-        #canvas {
-            background: #556b2f;
+        canvas {
             display: block;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
+            width: 100%;
+            height: 100%;
         }
 
         #sidebar {
-            width: 400px;
-            background: #1a1a1a;
-            border-left: 2px solid #444;
+            width: 440px;
+            background: var(--bg-panel);
+            border-left: 1px solid var(--border-glow);
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            height: 100%;
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(16px);
+            z-index: 10;
         }
 
         .sidebar-section {
             flex: 1;
             display: flex;
             flex-direction: column;
-            border-bottom: 2px solid #444;
             overflow: hidden;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .sidebar-section:last-child {
@@ -97,193 +132,213 @@
         }
 
         .section-header {
-            background: #2a2a2a;
-            padding: 10px 12px;
-            border-bottom: 1px solid #444;
-            font-weight: bold;
-            color: #f39c12;
+            padding: 18px 24px;
             font-size: 12px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: 1.5px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .section-content {
             flex: 1;
             overflow-y: auto;
-            padding: 10px;
-            font-size: 11px;
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
+        /* 2026 Grid Dashboard items */
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .inventory-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .inventory-card:hover {
+            border-color: var(--accent-blue);
+            background: rgba(56, 189, 248, 0.04);
+            transform: translateY(-2px);
+        }
+
+        .inv-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .inv-val {
+            font-family: var(--font-mono);
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+
+        /* Logs stream styling */
         .log-entry {
-            padding: 5px 8px;
-            margin: 3px 0;
-            background: rgba(100, 150, 200, 0.15);
-            border-left: 2px solid #3498db;
-            border-radius: 2px;
-            line-height: 1.4;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.01);
+            border-left: 3px solid var(--accent-blue);
+            border-radius: 4px;
+            line-height: 1.5;
+            color: var(--text-secondary);
         }
 
-        .log-entry.success {
-            border-left-color: #2ecc71;
-            background: rgba(46, 204, 113, 0.15);
+        .log-entry strong { color: var(--text-primary); margin-right: 6px; }
+        .log-entry.success { border-left-color: var(--accent-green); background: rgba(52, 211, 153, 0.03); }
+        .log-entry.warning { border-left-color: var(--accent-amber); background: rgba(251, 191, 36, 0.03); }
+        .log-entry.danger { border-left-color: var(--accent-rose); background: rgba(248, 113, 113, 0.03); }
+
+        /* Complex Minion Vector Cards */
+        .minion-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 14px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        .log-entry.warning {
-            border-left-color: #f39c12;
-            background: rgba(243, 156, 18, 0.15);
-        }
-
-        .log-entry.danger {
-            border-left-color: #e74c3c;
-            background: rgba(231, 76, 60, 0.15);
-        }
-
-        .inventory-row {
+        .minion-header {
             display: flex;
             justify-content: space-between;
-            padding: 5px 8px;
-            margin: 3px 0;
-            background: rgba(100, 150, 200, 0.1);
-            border-radius: 2px;
-            font-size: 11px;
+            align-items: center;
         }
 
-        .inventory-label {
-            color: #e0e0e0;
+        .minion-identity {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
         }
 
-        .inventory-value {
-            color: #2ecc71;
-            font-weight: bold;
-            min-width: 40px;
-            text-align: right;
-        }
-
-        .minion-card {
-            background: rgba(52, 152, 219, 0.2);
-            border: 1px solid #3498db;
-            border-radius: 3px;
-            padding: 8px;
-            margin: 5px 0;
+        .minion-task-badge {
             font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 4px 8px;
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent-blue);
+            border-radius: 6px;
+            letter-spacing: 0.5px;
         }
 
-        .minion-name {
-            font-weight: bold;
-            color: #3498db;
-            margin-bottom: 5px;
+        .minion-traits {
+            font-size: 11px;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 8px;
         }
 
         .minion-stat-bar {
             display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .bar-labels {
+            display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin: 3px 0;
-            font-size: 9px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-secondary);
         }
 
-        .stat-bar-fill {
-            flex: 1;
-            height: 8px;
-            background: #333;
-            border-radius: 2px;
-            margin: 0 5px;
-            overflow: hidden;
-        }
-
-        .stat-bar-inner {
-            height: 100%;
-            background: #3498db;
-            transition: width 0.2s;
-        }
-
-        .stat-bar-inner.danger {
-            background: #e74c3c;
-        }
-
-        .stat-bar-inner.warning {
-            background: #f39c12;
-        }
-
-        .stat-bar-inner.good {
-            background: #2ecc71;
-        }
-
-        button {
-            background: #3498db;
-            color: white;
-            border: 1px solid #2980b9;
-            padding: 6px 12px;
+        .bar-container {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 3px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: bold;
-            transition: 0.2s;
+            overflow: hidden;
+            position: relative;
         }
 
-        button:hover {
-            background: #2980b9;
-        }
-
-        button:active {
-            transform: scale(0.95);
+        .bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .control-buttons {
             display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 4px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        ::-webkit-scrollbar {
-            width: 8px;
+        button {
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: var(--font-sans);
+            transition: all 0.2s;
         }
 
-        ::-webkit-scrollbar-track {
-            background: #2a2a2a;
+        button.active, button:hover {
+            background: var(--accent-blue);
+            color: var(--bg-main);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
         }
 
-        ::-webkit-scrollbar-thumb {
-            background: #444;
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
     </style>
 </head>
 <body>
+
     <div id="gameViewport">
         <div id="topBar">
             <div class="stat-display">
                 <div class="stat-item">
-                    <span class="stat-label">DAY:</span>
-                    <span class="stat-value" id="dayCounter">0</span>
+                    <span class="stat-label">Cycle Day</span>
+                    <span class="stat-value" id="dayCounter">1</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">TICK:</span>
-                    <span class="stat-value" id="tickCounter">0</span>
+                    <span class="stat-label">Engine Ticks</span>
+                    <span class="stat-value" id="tickCounter">000000</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">POPULATION:</span>
+                    <span class="stat-label">Colony Population</span>
                     <span class="stat-value" id="populationCount">0</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">ANIMALS:</span>
+                    <span class="stat-label">Fauna Density</span>
                     <span class="stat-value" id="animalCount">0</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">SPEED:</span>
-                    <span class="stat-value" id="speedDisplay">1x</span>
                 </div>
             </div>
             <div class="control-buttons">
-                <button onclick="game.togglePause()">▶ PLAY</button>
-                <button onclick="game.setGameSpeed(0.5)">0.5x</button>
-                <button onclick="game.setGameSpeed(1)">1x</button>
-                <button onclick="game.setGameSpeed(2)">2x</button>
-                <button onclick="game.setGameSpeed(4)">4x</button>
+                <button id="btn-pause" onclick="game.togglePause()">PAUSE</button>
+                <button id="speed1" class="active" onclick="game.setGameSpeed(1)">1x</button>
+                <button id="speed2" onclick="game.setGameSpeed(2)">2x</button>
+                <button id="speed4" onclick="game.setGameSpeed(4)">4x</button>
             </div>
         </div>
         <div id="canvasContainer">
@@ -293,906 +348,652 @@
 
     <div id="sidebar">
         <div class="sidebar-section">
-            <div class="section-header">📦 SETTLEMENT INVENTORY</div>
+            <div class="section-header">
+                <span>📦 Core Outpost Inventory</span>
+            </div>
             <div class="section-content">
-                <div class="inventory-row">
-                    <span class="inventory-label">🍖 Food:</span>
-                    <span class="inventory-value" id="inv-food">0</span>
+                <div class="inventory-grid">
+                    <div class="inventory-card">
+                        <div class="inv-meta">🍖 Food Stock</div>
+                        <div class="inv-val" id="inv-food">0</div>
+                    </div>
+                    <div class="inventory-card">
+                        <div class="inv-meta">🪵 Lumber</div>
+                        <div class="inv-val" id="inv-wood">0</div>
+                    </div>
+                    <div class="inventory-card">
+                        <div class="inv-meta">🪨 Minerals</div>
+                        <div class="inv-val" id="inv-stone">0</div>
+                    </div>
+                    <div class="inventory-card">
+                        <div class="inv-meta">🪙 Credit Assets</div>
+                        <div class="inv-val" id="inv-gold">0</div>
+                    </div>
                 </div>
-                <div class="inventory-row">
-                    <span class="inventory-label">🌳 Wood:</span>
-                    <span class="inventory-value" id="inv-wood">0</span>
-                </div>
-                <div class="inventory-row">
-                    <span class="inventory-label">🪨 Stone:</span>
-                    <span class="inventory-value" id="inv-stone">0</span>
-                </div>
-                <div class="inventory-row">
-                    <span class="inventory-label">💰 Gold:</span>
-                    <span class="inventory-value" id="inv-gold">0</span>
-                </div>
-                <div class="inventory-row">
-                    <span class="inventory-label">🛏️ Beds:</span>
-                    <span class="inventory-value" id="inv-beds">0</span>
-                </div>
-                <div class="inventory-row">
-                    <span class="inventory-label">🏠 Houses:</span>
-                    <span class="inventory-value" id="inv-houses">0</span>
+                <div class="inventory-grid" style="margin-top: -4px;">
+                    <div class="inventory-card">
+                        <div class="inv-meta">🛌 Berths</div>
+                        <div class="inv-val" id="inv-beds">0</div>
+                    </div>
+                    <div class="inventory-card">
+                        <div class="inv-meta">🏠 Structural Grid</div>
+                        <div class="inv-val" id="inv-houses">0</div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="sidebar-section">
-            <div class="section-header">📜 SETTLEMENT LOG</div>
+            <div class="section-header">📜 Diagnostics & Event Log</div>
             <div class="section-content" id="settlementLog"></div>
         </div>
 
         <div class="sidebar-section">
-            <div class="section-header">👤 MINION STATUS</div>
+            <div class="section-header">👤 Colony Manifest (Vitals)</div>
             <div class="section-content" id="minionStatus"></div>
         </div>
     </div>
 
     <script>
-        // ============================================
-        // WORLD GENERATION & INITIALIZATION MODULE
-        // ============================================
+        // Name Generation Repositories
+        const NAMES_M = ["Kaelen", "Roran", "Varek", "Jaxon", "Cyrus", "Garrick", "Soren", "Torin", "Bram"];
+        const NAMES_F = ["Lyra", "Elysia", "Seraphina", "Vespera", "Maeve", "Freya", "Aria", "Isolde", "Kira"];
+        const SURNAMES = ["Stormcoat", "Ironwood", "Stoneshaper", "Ridgebreaker", "Deepwood", "Oathen", "Starrunner"];
 
+        // ============================================
+        // ISOMETRIC WORLD ENGINE & PROCECON TILE DESIGN
+        // ============================================
         class WorldTile {
             constructor(x, y, terrain) {
                 this.x = x;
                 this.y = y;
-                this.terrain = terrain; // 'grass', 'tree', 'crop', 'stone'
-                this.resourceAmount = 0;
+                this.terrain = terrain; // 'grass', 'tree', 'crop', 'stone', 'foundation', 'house'
+                this.resourceAmount = (terrain === 'grass') ? 0 : 100;
                 this.maxResource = 100;
                 this.regenerationCounter = 0;
-                this.regenerationRate = 150; // Ticks to fully regenerate
+                this.regenerationRate = 400; 
+                this.buildProgress = 0; // For constructing homes
             }
 
             update() {
-                if (this.resourceAmount < this.maxResource && this.terrain !== 'grass') {
+                if (this.resourceAmount < this.maxResource && (this.terrain === 'tree' || this.terrain === 'crop')) {
                     this.regenerationCounter++;
                     if (this.regenerationCounter >= this.regenerationRate) {
-                        this.resourceAmount = Math.min(this.maxResource, this.resourceAmount + 10);
+                        this.resourceAmount = Math.min(this.maxResource, this.resourceAmount + 25);
                         this.regenerationCounter = 0;
                     }
                 }
             }
 
             harvest(amount) {
-                const harvested = Math.min(amount, this.resourceAmount);
-                this.resourceAmount -= harvested;
-                this.regenerationCounter = 0;
-                return harvested;
-            }
-
-            draw(ctx, x, y, size) {
-                // Base terrain
-                switch (this.terrain) {
-                    case 'grass':
-                        ctx.fillStyle = '#3d5c2f';
-                        break;
-                    case 'tree':
-                        ctx.fillStyle = '#1b6b1f';
-                        break;
-                    case 'crop':
-                        ctx.fillStyle = '#8b7500';
-                        break;
-                    case 'stone':
-                        ctx.fillStyle = '#696969';
-                        break;
-                    default:
-                        ctx.fillStyle = '#556b2f';
-                }
-
-                ctx.fillRect(x, y, size, size);
-
-                // Draw resource indicator
-                if (this.terrain === 'tree') {
-                    // Draw tree symbols
-                    ctx.fillStyle = '#4CAF50';
-                    ctx.beginPath();
-                    ctx.arc(x + size / 2, y + size / 2, size / 3, 0, Math.PI * 2);
-                    ctx.fill();
-                } else if (this.terrain === 'crop') {
-                    // Draw crop symbols
-                    ctx.fillStyle = '#FFD700';
-                    for (let i = 0; i < 3; i++) {
-                        ctx.fillRect(x + 2 + i * 5, y + 4, 3, 6);
-                    }
-                } else if (this.terrain === 'stone') {
-                    // Draw stone symbol
-                    ctx.fillStyle = '#A9A9A9';
-                    ctx.fillRect(x + 4, y + 4, 8, 8);
-                }
-
-                // Resource depletion indicator
-                if (this.resourceAmount < this.maxResource * 0.5 && this.resourceAmount > 0 && this.terrain !== 'grass') {
-                    ctx.strokeStyle = '#FF6B6B';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(x, y, size, size);
-                }
-
-                // Tile border
-                ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(x, y, size, size);
+                let available = Math.min(amount, this.resourceAmount);
+                this.resourceAmount -= available;
+                return available;
             }
         }
 
         class WorldGenerator {
-            constructor(width, height, tileSize) {
+            constructor(width, height) {
                 this.width = width;
                 this.height = height;
-                this.tileSize = tileSize;
                 this.tiles = [];
-                this.generateWorld();
+                this.generateMatrix();
             }
 
-            generateWorld() {
-                // Initialize all tiles as grass
+            generateMatrix() {
                 for (let y = 0; y < this.height; y++) {
                     const row = [];
                     for (let x = 0; x < this.width; x++) {
-                        row.push(new WorldTile(x, y, 'grass'));
+                        // Advanced analytical noise layer substitute
+                        let noiseFactor = Math.sin(x * 0.4) * Math.cos(y * 0.4) + Math.sin(y * 0.1);
+                        let terrain = 'grass';
+                        
+                        // Central clearing for standard safe spawn guarantees
+                        let distToCenter = Math.sqrt(Math.pow(x - this.width/2, 2) + Math.pow(y - this.height/2, 2));
+                        
+                        if (distToCenter > 3) {
+                            if (noiseFactor > 0.4) terrain = 'tree';
+                            else if (noiseFactor < -0.3) terrain = 'crop';
+                            else if (noiseFactor > 0.25 && noiseFactor < 0.35) terrain = 'stone';
+                        }
+                        row.push(new WorldTile(x, y, terrain));
                     }
                     this.tiles.push(row);
-                }
-
-                // Spawn trees (15% of map)
-                const treeCount = Math.floor((this.width * this.height * 0.15));
-                for (let i = 0; i < treeCount; i++) {
-                    const x = Math.floor(Math.random() * this.width);
-                    const y = Math.floor(Math.random() * this.height);
-                    if (this.getTile(x, y).terrain === 'grass') {
-                        this.getTile(x, y).terrain = 'tree';
-                        this.getTile(x, y).resourceAmount = 100;
-                    }
-                }
-
-                // Spawn wild crops/berries (10% of map)
-                const cropCount = Math.floor((this.width * this.height * 0.10));
-                for (let i = 0; i < cropCount; i++) {
-                    const x = Math.floor(Math.random() * this.width);
-                    const y = Math.floor(Math.random() * this.height);
-                    if (this.getTile(x, y).terrain === 'grass') {
-                        this.getTile(x, y).terrain = 'crop';
-                        this.getTile(x, y).resourceAmount = 100;
-                    }
-                }
-
-                // Spawn stone nodes (5% of map)
-                const stoneCount = Math.floor((this.width * this.height * 0.05));
-                for (let i = 0; i < stoneCount; i++) {
-                    const x = Math.floor(Math.random() * this.width);
-                    const y = Math.floor(Math.random() * this.height);
-                    if (this.getTile(x, y).terrain === 'grass') {
-                        this.getTile(x, y).terrain = 'stone';
-                        this.getTile(x, y).resourceAmount = 80;
-                    }
                 }
             }
 
             getTile(x, y) {
-                if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
-                    return null;
-                }
+                if (x < 0 || x >= this.width || y < 0 || y >= this.height) return null;
                 return this.tiles[y][x];
             }
-
-            getTileByCoord(pixelX, pixelY) {
-                const x = Math.floor(pixelX / this.tileSize);
-                const y = Math.floor(pixelY / this.tileSize);
-                return this.getTile(x, y);
-            }
-
-            update() {
-                for (let row of this.tiles) {
-                    for (let tile of row) {
-                        tile.update();
-                    }
-                }
-            }
-
-            draw(ctx) {
-                for (let row of this.tiles) {
-                    for (let tile of row) {
-                        const x = tile.x * this.tileSize;
-                        const y = tile.y * this.tileSize;
-                        tile.draw(ctx, x, y, this.tileSize);
-                    }
-                }
-            }
         }
 
         // ============================================
-        // ANIMAL ENTITY
+        // SUB-PIXEL VECTOR VECTOR MINION ENTITIES 
         // ============================================
-
-        class WildAnimal {
-            constructor(x, y, id) {
+        class Minion {
+            constructor(mapX, mapY, id) {
                 this.id = id;
-                this.x = x;
-                this.y = y;
-                this.vx = (Math.random() - 0.5) * 2;
-                this.vy = (Math.random() - 0.5) * 2;
-                this.radius = 12;
-                this.health = 50;
-                this.isDead = false;
+                this.sex = Math.random() > 0.5 ? 'M' : 'F';
+                this.name = `${this.sex === 'M' ? NAMES_M[Math.floor(Math.random()*NAMES_M.length)] : NAMES_F[Math.floor(Math.random()*NAMES_F.length)]} ${SURNAMES[Math.floor(Math.random()*SURNAMES.length)]}`;
+                
+                // Vector Positional Data
+                this.x = mapX; 
+                this.y = mapY;
+                this.targetX = mapX;
+                this.targetY = mapY;
+                this.speed = 0.05; // Tile percentage coverage per frame update
+                
+                // Vitals State Matrix
+                this.age = 22;
+                this.hunger = 20;  // Scale 0-100 (High = Hungry)
+                this.energy = 100; // Scale 0-100 (Low = Tired)
+                this.libido = 10;  // Scale 0-100
+                
+                this.currentTask = 'idle'; // 'idle', 'seeking_food', 'harvesting', 'gathering_wood', 'mining', 'building', 'sleeping'
+                this.actionTarget = null;
             }
 
-            update() {
-                // Wander randomly
-                if (Math.random() < 0.01) {
-                    this.vx = (Math.random() - 0.5) * 3;
-                    this.vy = (Math.random() - 0.5) * 3;
+            update(engine) {
+                // Lifecycles increments
+                this.age += 0.001;
+                this.hunger += 0.04 * engine.gameSpeed;
+                this.energy -= 0.02 * engine.gameSpeed;
+                if (this.age > 18) this.libido += 0.03 * engine.gameSpeed;
+
+                // Meta State Evaluation Priority Tree
+                if (this.hunger > 95 || this.age > 85) {
+                    this.isDead = true;
+                    return;
                 }
 
-                this.x += this.vx;
-                this.y += this.vy;
-
-                // Boundary wrapping
-                if (this.x < 0) this.x = 800;
-                if (this.x > 800) this.x = 0;
-                if (this.y < 0) this.y = 600;
-                if (this.y > 600) this.y = 0;
+                this.evaluateDirectives(engine);
+                this.executeMovement();
             }
 
-            draw(ctx) {
-                // Body
-                ctx.fillStyle = '#8B4513';
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fill();
+            evaluateDirectives(engine) {
+                // Priority 1: Starvation emergency loop
+                if (this.hunger > 60 && this.currentTask !== 'seeking_food' && this.currentTask !== 'harvesting') {
+                    this.findNearestResource(engine, 'crop', 'seeking_food');
+                }
+                // Priority 2: Exhaustion restoration loop
+                else if (this.energy < 15 && this.currentTask !== 'sleeping') {
+                    this.currentTask = 'sleeping';
+                    this.targetX = Math.floor(engine.mapWidth / 2);
+                    this.targetY = Math.floor(engine.mapHeight / 2);
+                }
+                // Priority 3: General operations execution
+                else if (this.currentTask === 'idle' || Math.random() < 0.005) {
+                    if (this.energy > 40) {
+                        if (engine.resources.wood < engine.resources.stone) {
+                            this.findNearestResource(engine, 'tree', 'gathering_wood');
+                        } else if (engine.resources.stone < 100) {
+                            this.findNearestResource(engine, 'stone', 'mining');
+                        } else {
+                            this.checkConstructionJobs(engine);
+                        }
+                    }
+                }
 
-                // Head
-                ctx.fillStyle = '#A0522D';
-                ctx.beginPath();
-                ctx.arc(this.x - 8, this.y - 8, 8, 0, Math.PI * 2);
-                ctx.fill();
+                // Process Action executions when target destinations are acquired
+                this.processTaskExecution(engine);
+            }
 
-                // Ears
-                ctx.fillStyle = '#654321';
-                ctx.beginPath();
-                ctx.arc(this.x - 12, this.y - 14, 3, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(this.x - 4, this.y - 14, 3, 0, Math.PI * 2);
-                ctx.fill();
+            findNearestResource(engine, terrainType, taskName) {
+                let closest = null;
+                let minDist = Infinity;
+                for (let y = 0; y < engine.mapHeight; y++) {
+                    for (let x = 0; x < engine.mapWidth; x++) {
+                        let t = engine.world.getTile(x, y);
+                        if (t && t.terrain === terrainType && t.resourceAmount > 10) {
+                            let d = Math.sqrt(Math.pow(x - this.x, 2) + Math.pow(y - this.y, 2));
+                            if (d < minDist) {
+                                minDist = d;
+                                closest = t;
+                            }
+                        }
+                    }
+                }
+                if (closest) {
+                    this.currentTask = taskName;
+                    this.targetX = closest.x;
+                    this.targetY = closest.y;
+                    this.actionTarget = closest;
+                } else {
+                    this.currentTask = 'idle';
+                }
+            }
 
-                // Eyes
-                ctx.fillStyle = '#000';
-                ctx.beginPath();
-                ctx.arc(this.x - 10, this.y - 10, 2, 0, Math.PI * 2);
-                ctx.fill();
+            checkConstructionJobs(engine) {
+                for (let y = 0; y < engine.mapHeight; y++) {
+                    for (let x = 0; x < engine.mapWidth; x++) {
+                        let t = engine.world.getTile(x, y);
+                        if (t && (t.terrain === 'foundation')) {
+                            this.currentTask = 'building';
+                            this.targetX = x;
+                            this.targetY = y;
+                            this.actionTarget = t;
+                            return;
+                        }
+                    }
+                }
+                // Default wander if no specialized assets found
+                this.targetX = Math.max(0, Math.min(engine.mapWidth - 1, this.x + Math.floor(Math.random()*5)-2));
+                this.targetY = Math.max(0, Math.min(engine.mapHeight - 1, this.y + Math.floor(Math.random()*5)-2));
+                this.currentTask = 'idle';
+            }
 
-                // Health bar
-                ctx.fillStyle = '#333';
-                ctx.fillRect(this.x - 15, this.y - 28, 30, 3);
-                ctx.fillStyle = this.health > 35 ? '#00FF00' : this.health > 20 ? '#FFAA00' : '#FF0000';
-                ctx.fillRect(this.x - 15, this.y - 28, (this.health / 50) * 30, 3);
+            processTaskExecution(engine) {
+                let distanceToTarget = Math.sqrt(Math.pow(this.targetX - this.x, 2) + Math.pow(this.targetY - this.y, 2));
+                
+                if (distanceToTarget < 0.2) { // At target node
+                    switch (this.currentTask) {
+                        case 'seeking_food':
+                        case 'harvesting':
+                            if (this.actionTarget && this.actionTarget.resourceAmount > 0) {
+                                this.currentTask = 'harvesting';
+                                let gathered = this.actionTarget.harvest(1.5 * engine.gameSpeed);
+                                engine.resources.food += gathered;
+                                this.hunger = Math.max(0, this.hunger - (gathered * 2.5));
+                                if (this.hunger <= 10) this.currentTask = 'idle';
+                            } else { this.currentTask = 'idle'; }
+                            break;
 
-                // Label
-                ctx.fillStyle = '#FFF';
-                ctx.font = 'bold 8px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('🦌', this.x, this.y + 22);
+                        case 'gathering_wood':
+                            if (this.actionTarget && this.actionTarget.resourceAmount > 0) {
+                                let gathered = this.actionTarget.harvest(1.2 * engine.gameSpeed);
+                                engine.resources.wood += gathered;
+                                if (this.actionTarget.resourceAmount <= 0) this.currentTask = 'idle';
+                            } else { this.currentTask = 'idle'; }
+                            break;
+
+                        case 'mining':
+                            if (this.actionTarget && this.actionTarget.resourceAmount > 0) {
+                                let gathered = this.actionTarget.harvest(1.0 * engine.gameSpeed);
+                                engine.resources.stone += gathered;
+                                if (this.actionTarget.resourceAmount <= 0) this.currentTask = 'idle';
+                            } else { this.currentTask = 'idle'; }
+                            break;
+
+                        case 'building':
+                            if (this.actionTarget && this.actionTarget.terrain === 'foundation') {
+                                this.actionTarget.buildProgress += 0.8 * engine.gameSpeed;
+                                if (this.actionTarget.buildProgress >= 100) {
+                                    this.actionTarget.terrain = 'house';
+                                    engine.resources.houses++;
+                                    engine.beds += 3;
+                                    engine.addLog(`🏗️ Structural grid asset operational at (${this.actionTarget.x}, ${this.actionTarget.y})`, 'success');
+                                    this.currentTask = 'idle';
+                                }
+                            } else { this.currentTask = 'idle'; }
+                            break;
+
+                        case 'sleeping':
+                            this.energy = Math.min(100, this.energy + 0.6 * engine.gameSpeed);
+                            this.hunger += 0.01 * engine.gameSpeed; // Lower metabolism during sleep operations
+                            if (this.energy >= 95) this.currentTask = 'idle';
+                            break;
+                    }
+                }
+            }
+
+            executeMovement() {
+                let dx = this.targetX - this.x;
+                let dy = this.targetY - this.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist > 0.05) {
+                    this.x += (dx / dist) * this.speed;
+                    this.y += (dy / dist) * this.speed;
+                } else {
+                    this.x = this.targetX;
+                    this.y = this.targetY;
+                }
             }
         }
 
         // ============================================
-        // GAME ENGINE
+        // FAUNA SIMULATION MODULE
         // ============================================
+        class WildAnimal {
+            constructor(mapWidth, mapHeight) {
+                this.x = Math.random() * mapWidth;
+                this.y = Math.random() * mapHeight;
+                this.targetX = this.x;
+                this.targetY = this.y;
+                this.speed = 0.02;
+            }
 
+            update(engine) {
+                if (Math.random() < 0.02) {
+                    this.targetX = Math.max(0, Math.min(engine.mapWidth - 1, this.x + (Math.random() * 4 - 2)));
+                    this.targetY = Math.max(0, Math.min(engine.mapHeight - 1, this.y + (Math.random() * 4 - 2)));
+                }
+                let dx = this.targetX - this.x;
+                let dy = this.targetY - this.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist > 0.05) {
+                    this.x += (dx / dist) * this.speed * engine.gameSpeed;
+                    this.y += (dy / dist) * this.speed * engine.gameSpeed;
+                }
+            }
+        }
+
+        // ============================================
+        // MASTER CENTRALIZED GAME ARCHITECTURE ENGINE
+        // ============================================
         class GameEngine {
-            constructor(tileSize) {
+            constructor() {
                 this.tickCount = 0;
-                this.dayCount = 0;
+                this.dayCount = 1;
                 this.isPaused = false;
                 this.gameSpeed = 1;
-                this.selectedMinionId = null;
                 
-                // World generation
-                this.mapWidth = 16;
-                this.mapHeight = 12;
-                this.tileSize = tileSize;
-                this.world = new WorldGenerator(this.mapWidth, this.mapHeight, tileSize);
+                // Resolution mapping
+                this.mapWidth = 24;
+                this.mapHeight = 24;
+                this.world = new WorldGenerator(this.mapWidth, this.mapHeight);
                 
-                // Entities
                 this.minions = [];
-                this.minionIdCounter = 0;
                 this.animals = [];
-                this.animalIdCounter = 0;
-                this.buildings = [];
-                this.buildingIdCounter = 0;
+                this.minionIdCounter = 0;
                 
-                // Resources
-                this.resources = {
-                    food: 200,
-                    wood: 100,
-                    stone: 50,
-                    gold: 10
-                };
-                this.beds = 10;
-                
-                // Game state
+                this.resources = { food: 450, wood: 80, stone: 60, gold: 150, houses: 0 };
+                this.beds = 4;
                 this.gameLog = [];
-                this.lastTradeCaravan = 0;
-                this.caravanArrivalInterval = 200;
-                
-                // Spawn initial animals
-                this.spawnWildAnimals();
-                
-                this.addLog('🌍 World generated. Trees 🌳, Crops 🌾, and Stone visible!', 'success');
+
+                this.initCanvas();
+                this.bootstrapColony();
             }
 
-            spawnWildAnimals() {
-                const animalCount = 4;
-                for (let i = 0; i < animalCount; i++) {
-                    const animal = new WildAnimal(
-                        Math.random() * 800 + 200,
-                        Math.random() * 400 + 150,
-                        this.animalIdCounter++
-                    );
-                    this.animals.push(animal);
+            initCanvas() {
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+                
+                // Isometric Transform Meta Constants
+                this.tileW = 64; 
+                this.tileH = 32;
+            }
+
+            resizeCanvas() {
+                const container = document.getElementById('canvasContainer');
+                this.canvas.width = container.clientWidth;
+                this.canvas.height = container.clientHeight;
+            }
+
+            bootstrapColony() {
+                // Initialize modern starting grid setup
+                for (let i = 0; i < 4; i++) {
+                    this.minions.push(new Minion(this.mapWidth/2 + (Math.random()*2-1), this.mapHeight/2 + (Math.random()*2-1), this.minionIdCounter++));
                 }
-                this.addLog(`🦌 ${animalCount} wild animals roaming the lands`, 'info');
+                for (let i = 0; i < 8; i++) {
+                    this.animals.push(new WildAnimal(this.mapWidth, this.mapHeight));
+                }
+                this.addLog("🌍 Sector generation initialized. Sub-orbital drop pods landed successfully.", "success");
             }
 
             togglePause() {
                 this.isPaused = !this.isPaused;
+                document.getElementById('btn-pause').classList.toggle('active', this.isPaused);
+                document.getElementById('btn-pause').textContent = this.isPaused ? "RESUME" : "PAUSE";
             }
 
             setGameSpeed(speed) {
                 this.gameSpeed = speed;
-                document.getElementById('speedDisplay').textContent = speed + 'x';
+                ['speed1', 'speed2', 'speed4'].forEach(id => document.getElementById(id).classList.remove('active'));
+                document.getElementById(`speed${speed}`).classList.add('active');
             }
 
-            tick() {
-                if (this.isPaused) return;
-
-                this.tickCount++;
-                if (this.tickCount % 60 === 0) {
-                    this.dayCount++;
-                }
-
-                // Update world tiles (regeneration)
-                this.world.update();
-
-                // Update animals
-                this.animals.forEach(animal => animal.update());
-
-                // Update minions
-                for (let i = this.minions.length - 1; i >= 0; i--) {
-                    this.minions[i].update(this);
-                    if (this.minions[i].isDead) {
-                        this.addLog(`☠️ ${this.minions[i].name} has died.`, 'danger');
-                        this.minions.splice(i, 1);
-                    }
-                }
-
-                // Reproduction attempts
-                if (this.tickCount % 300 === 0) {
-                    this.attemptReproduction();
-                }
-
-                // Building updates
-                this.buildings.forEach(b => b.update(this));
-
-                // Auto-build houses
-                if (this.tickCount % 30 === 0) {
-                    this.tryBuildHouse();
-                }
-
-                // Minion resource harvesting
-                if (this.tickCount % 10 === 0) {
-                    this.updateResourceHarvesting();
-                }
-
-                // Trade caravan
-                if (this.tickCount - this.lastTradeCaravan >= this.caravanArrivalInterval) {
-                    this.tradeWithCaravan();
-                    this.lastTradeCaravan = this.tickCount;
-                }
-
-                this.updateUI();
+            addLog(message, type = 'info') {
+                const stamp = `[D.${this.dayCount}]`;
+                this.gameLog.unshift({ message, type, stamp });
+                if (this.gameLog.length > 30) this.gameLog.pop();
             }
 
-            updateResourceHarvesting() {
-                for (let minion of this.minions) {
-                    // Prioritize harvesting if hungry
-                    if (minion.hunger > 60) {
-                        // Find nearest crop tile
-                        let nearestCrop = null;
-                        let nearestDist = Infinity;
-
-                        for (let row of this.world.tiles) {
-                            for (let tile of row) {
-                                if (tile.terrain === 'crop' && tile.resourceAmount > 0) {
-                                    const tilePixelX = tile.x * this.tileSize + this.tileSize / 2;
-                                    const tilePixelY = tile.y * this.tileSize + this.tileSize / 2;
-                                    const dx = tilePixelX - minion.x;
-                                    const dy = tilePixelY - minion.y;
-                                    const dist = Math.sqrt(dx * dx + dy * dy);
-                                    if (dist < nearestDist) {
-                                        nearestDist = dist;
-                                        nearestCrop = tile;
-                                    }
-                                }
-                            }
-                        }
-
-                        if (nearestCrop && nearestDist < 150) {
-                            minion.currentTask = 'harvesting';
-                            const harvested = nearestCrop.harvest(15);
-                            this.resources.food += harvested;
-                            minion.hunger = Math.max(0, minion.hunger - harvested * 0.5);
-                        }
-                    }
-
-                    // Harvest wood if wood is low
-                    if (this.resources.wood < 100 && minion.energy > 40) {
-                        let nearestTree = null;
-                        let nearestDist = Infinity;
-
-                        for (let row of this.world.tiles) {
-                            for (let tile of row) {
-                                if (tile.terrain === 'tree' && tile.resourceAmount > 0) {
-                                    const tilePixelX = tile.x * this.tileSize + this.tileSize / 2;
-                                    const tilePixelY = tile.y * this.tileSize + this.tileSize / 2;
-                                    const dx = tilePixelX - minion.x;
-                                    const dy = tilePixelY - minion.y;
-                                    const dist = Math.sqrt(dx * dx + dy * dy);
-                                    if (dist < nearestDist) {
-                                        nearestDist = dist;
-                                        nearestTree = tile;
-                                    }
-                                }
-                            }
-                        }
-
-                        if (nearestTree && nearestDist < 200) {
-                            minion.currentTask = 'gathering';
-                            const harvested = nearestTree.harvest(10);
-                            this.resources.wood += harvested;
-                            minion.energy = Math.max(0, minion.energy - harvested * 0.3);
-                        }
-                    }
-                }
-            }
-
-            attemptReproduction() {
-                if (this.minions.length < 2) return;
-
-                for (let i = 0; i < this.minions.length; i++) {
-                    if (this.minions[i].age < 20) continue;
-                    if (this.minions[i].libido < 70) continue;
-
-                    for (let j = i + 1; j < this.minions.length; j++) {
-                        if (this.minions[j].age < 20) continue;
-                        if (this.minions[j].libido < 70) continue;
-                        if (this.minions[i].sex === this.minions[j].sex) continue;
-
-                        const dx = this.minions[i].x - this.minions[j].x;
-                        const dy = this.minions[i].y - this.minions[j].y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-
-                        if (dist < 50) {
-                            const newMinion = new Minion(
-                                this.minions[i].x + Math.random() * 20 - 10,
-                                this.minions[i].y + Math.random() * 20 - 10,
-                                this.minionIdCounter++
-                            );
-                            newMinion.age = 0;
-                            this.minions.push(newMinion);
-                            this.minions[i].libido = 0;
-                            this.minions[j].libido = 0;
-                            this.addLog(`👶 New minion born: ${newMinion.name}`, 'success');
+            tryPlanHouse() {
+                if (this.resources.wood >= 60 && this.resources.stone >= 40) {
+                    // Search for free tile matching adjacency rules
+                    for (let i = 0; i < 100; i++) {
+                        let rx = Math.floor(Math.random() * (this.mapWidth - 4)) + 2;
+                        let ry = Math.floor(Math.random() * (this.mapHeight - 4)) + 2;
+                        let tile = this.world.getTile(rx, ry);
+                        if (tile && tile.terrain === 'grass') {
+                            tile.terrain = 'foundation';
+                            tile.buildProgress = 0;
+                            this.resources.wood -= 60;
+                            this.resources.stone -= 40;
+                            this.addLog(`📐 Structural blueprint mapped at vector array (${rx}, ${ry}).`, 'info');
                             return;
                         }
                     }
                 }
             }
 
-            tryBuildHouse() {
-                if (this.resources.wood < 50 || this.resources.stone < 50) return;
-                if (this.buildings.length >= 8) return;
-
-                const x = Math.floor(Math.random() * (this.mapWidth - 3)) + 2;
-                const y = Math.floor(Math.random() * (this.mapHeight - 3)) + 2;
-
-                const building = new Building(x * this.tileSize, y * this.tileSize, 'house', this.buildingIdCounter++);
-                this.buildings.push(building);
-
-                this.resources.wood -= 50;
-                this.resources.stone -= 50;
-                this.beds += 2;
-                this.addLog(`🏠 New house blueprint at (${x}, ${y})`, 'success');
-            }
-
-            tradeWithCaravan() {
-                let trades = [];
+            processReproductionLoop() {
+                if (this.minions.length < 2 || this.minions.length >= this.beds) return;
                 
-                if (this.resources.food > 500) {
-                    const surplus = this.resources.food - 300;
-                    const goldEarned = Math.floor(surplus * 0.5);
-                    this.resources.food = 300;
-                    this.resources.gold += goldEarned;
-                    trades.push(`Sold ${surplus} Food`);
-                }
-
-                if (this.resources.wood < 80 && this.resources.gold >= 20) {
-                    this.resources.gold -= 20;
-                    this.resources.wood += 60;
-                    trades.push(`Bought 60 Wood`);
-                }
-
-                if (this.resources.stone < 80 && this.resources.gold >= 15) {
-                    this.resources.gold -= 15;
-                    this.resources.stone += 50;
-                    trades.push(`Bought 50 Stone`);
-                }
-
-                if (trades.length > 0) {
-                    this.addLog(`🛒 Caravan: ${trades.join('; ')}`, 'success');
-                }
-            }
-
-            addLog(message, type = 'info') {
-                const timestamp = `Day ${this.dayCount}`;
-                const entry = { message, type, timestamp };
-                this.gameLog.unshift(entry);
-                if (this.gameLog.length > 50) this.gameLog.pop();
-            }
-
-            updateUI() {
-                document.getElementById('dayCounter').textContent = this.dayCount;
-                document.getElementById('tickCounter').textContent = this.tickCount;
-                document.getElementById('populationCount').textContent = this.minions.length;
-                document.getElementById('animalCount').textContent = this.animals.length;
-
-                document.getElementById('inv-food').textContent = this.resources.food;
-                document.getElementById('inv-wood').textContent = this.resources.wood;
-                document.getElementById('inv-stone').textContent = this.resources.stone;
-                document.getElementById('inv-gold').textContent = this.resources.gold;
-                document.getElementById('inv-beds').textContent = this.beds;
-                document.getElementById('inv-houses').textContent = this.buildings.length;
-
-                const logHtml = this.gameLog.map(entry => 
-                    `<div class="log-entry ${entry.type}"><strong>${entry.timestamp}:</strong> ${entry.message}</div>`
-                ).join('');
-                document.getElementById('settlementLog').innerHTML = logHtml || '<div style="opacity: 0.5;">No events yet...</div>';
-
-                if (this.minions.length > 0) {
-                    const topMinions = this.minions.slice(0, 3);
-                    document.getElementById('minionStatus').innerHTML = topMinions.map(m => 
-                        this.getMinionStatusHtml(m)
-                    ).join('');
-                } else {
-                    document.getElementById('minionStatus').innerHTML = '<div style="opacity: 0.5;">No minions yet...</div>';
-                }
-            }
-
-            getMinionStatusHtml(minion) {
-                const hungerPercent = (minion.hunger / 100) * 100;
-                const energyPercent = (minion.energy / 100) * 100;
-                const libidoPercent = (minion.libido / 100) * 100;
-
-                const hungerClass = minion.hunger > 80 ? 'danger' : minion.hunger > 50 ? 'warning' : 'good';
-                const energyClass = minion.energy < 20 ? 'danger' : minion.energy < 50 ? 'warning' : 'good';
-
-                return `
-                    <div class="minion-card">
-                        <div class="minion-name">${minion.name} ${minion.sex === 'M' ? '♂' : '♀'}</div>
-                        <div class="minion-stat-bar">
-                            <span>HUNGER:</span>
-                            <div class="stat-bar-fill"><div class="stat-bar-inner ${hungerClass}" style="width: ${hungerPercent}%"></div></div>
-                            <span>${Math.round(minion.hunger)}</span>
-                        </div>
-                        <div class="minion-stat-bar">
-                            <span>ENERGY:</span>
-                            <div class="stat-bar-fill"><div class="stat-bar-inner ${energyClass}" style="width: ${energyPercent}%"></div></div>
-                            <span>${Math.round(minion.energy)}</span>
-                        </div>
-                        <div class="minion-stat-bar">
-                            <span>LIBIDO:</span>
-                            <div class="stat-bar-fill"><div class="stat-bar-inner" style="width: ${libidoPercent}%; background: #e91e63;"></div></div>
-                            <span>${Math.round(minion.libido)}</span>
-                        </div>
-                        <div style="margin-top: 8px; font-size: 10px; color: #aaa;">
-                            Task: <span style="color: #3498db; font-weight: bold;">${minion.currentTask}</span>
-                        </div>
-                    </div>
-                `;
-            }
-        }
-
-        // ============================================
-        // MINION ENTITY
-        // ============================================
-
-        class Minion {
-            constructor(x, y, id) {
-                this.id = id;
-                this.name = this.generateName();
-                this.sex = Math.random() < 0.5 ? 'M' : 'F';
-                this.age = 20 + Math.random() * 30;
-                
-                this.x = x;
-                this.y = y;
-                this.vx = 0;
-                this.vy = 0;
-                
-                this.hunger = 40 + Math.random() * 30;
-                this.energy = 70 + Math.random() * 30;
-                this.libido = Math.random() * 50;
-                this.isDead = false;
-                
-                this.currentTask = 'wandering';
-                this.taskTimer = 0;
-            }
-
-            generateName() {
-                const names = ['Bob', 'Alice', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry'];
-                return names[Math.floor(Math.random() * names.length)] + '_' + Math.floor(Math.random() * 1000);
-            }
-
-            update(engine) {
-                this.age += 0.01;
-                this.hunger += 0.12;
-                this.energy -= 0.1;
-                this.libido += 0.03;
-
-                this.hunger = Math.min(100, this.hunger);
-                this.energy = Math.max(0, this.energy);
-                this.libido = Math.min(100, this.libido);
-
-                if (this.hunger >= 100) {
-                    this.isDead = true;
-                    return;
-                }
-
-                if (this.energy <= 0) {
-                    this.currentTask = 'sleeping';
-                    this.energy = Math.min(100, this.energy + 1);
-                    if (this.energy >= 60) {
-                        this.currentTask = 'wandering';
-                    }
-                }
-
-                if (this.hunger > 80) {
-                    this.currentTask = 'eating';
-                } else if (this.energy < 20) {
-                    this.currentTask = 'sleeping';
-                } else if (this.currentTask === 'eating' && this.hunger < 40) {
-                    this.currentTask = 'wandering';
-                }
-
-                if (this.currentTask === 'wandering') {
-                    if (Math.random() < 0.02) {
-                        this.vx = (Math.random() - 0.5) * 2.5;
-                        this.vy = (Math.random() - 0.5) * 2.5;
-                    }
-                } else if (this.currentTask === 'sleeping') {
-                    this.vx *= 0.95;
-                    this.vy *= 0.95;
-                }
-
-                this.x += this.vx;
-                this.y += this.vy;
-
-                // Boundary wrapping for larger canvas
-                if (this.x < 10) this.x = 10;
-                if (this.x > 400 - 10) this.x = 400 - 10;
-                if (this.y < 10) this.y = 10;
-                if (this.y > 300 - 10) this.y = 300 - 10;
-            }
-
-            draw(ctx, selected) {
-                ctx.fillStyle = selected ? '#FFD700' : '#FFD93D';
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.fillStyle = '#000';
-                ctx.beginPath();
-                ctx.arc(this.x - 4, this.y - 2, 2, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(this.x + 4, this.y - 2, 2, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = 0.5;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y + 2, 2, 0, Math.PI);
-                ctx.stroke();
-
-                if (selected) {
-                    ctx.strokeStyle = '#FFD700';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, 18, 0, Math.PI * 2);
-                    ctx.stroke();
-                }
-
-                const barWidth = 20;
-                const barHeight = 2;
-                ctx.fillStyle = '#333';
-                ctx.fillRect(this.x - barWidth / 2, this.y - 16, barWidth, barHeight);
-                const healthPercent = 100 - (this.hunger / 100) * 50 - (this.energy / 100) * 50;
-                ctx.fillStyle = healthPercent > 75 ? '#00FF00' : healthPercent > 50 ? '#FFAA00' : '#FF0000';
-                ctx.fillRect(this.x - barWidth / 2, this.y - 16, (barWidth * healthPercent) / 100, barHeight);
-            }
-        }
-
-        // ============================================
-        // BUILDING ENTITY
-        // ============================================
-
-        class Building {
-            constructor(x, y, type, id) {
-                this.id = id;
-                this.x = x;
-                this.y = y;
-                this.type = type;
-                this.width = 35;
-                this.height = 45;
-                this.health = 100;
-                this.constructionProgress = 0;
-                this.isBuilt = false;
-            }
-
-            update(engine) {
-                if (!this.isBuilt) {
-                    for (let minion of engine.minions) {
-                        if (minion.energy > 40 && minion.hunger < 60) {
-                            const dx = this.x - minion.x;
-                            const dy = this.y - minion.y;
-                            const dist = Math.sqrt(dx * dx + dy * dy);
-                            if (dist < 80) {
-                                minion.currentTask = 'building';
-                                this.constructionProgress += 0.8;
-                                if (this.constructionProgress >= 100) {
-                                    this.isBuilt = true;
-                                    engine.addLog(`🏠 House completed!`, 'success');
-                                }
-                                break;
-                            }
+                for (let i = 0; i < this.minions.length; i++) {
+                    let m1 = this.minions[i];
+                    if (m1.libido < 75) continue;
+                    
+                    for (let j = 0; j < this.minions.length; j++) {
+                        let m2 = this.minions[j];
+                        if (m1.sex === m2.sex || m2.libido < 75) continue;
+                        
+                        let dist = Math.sqrt(Math.pow(m1.x - m2.x, 2) + Math.pow(m1.y - m2.y, 2));
+                        if (dist < 1.5) {
+                            // Birth implementation instantiation
+                            let child = new Minion(m1.x, m1.y, this.minionIdCounter++);
+                            child.age = 0; 
+                            this.minions.push(child);
+                            m1.libido = 0;
+                            m2.libido = 0;
+                            this.addLog(`👶 Vital statistics expanded: Newborn ${child.name} entered ecosystem.`, 'success');
+                            return;
                         }
                     }
                 }
             }
 
-            draw(ctx) {
-                const opacity = this.isBuilt ? 1 : 0.6;
-                ctx.globalAlpha = opacity;
+            processMarketTrading() {
+                // Autonomous trade ship engine simulation
+                if (this.tickCount % 500 === 0) {
+                    let log = [];
+                    if (this.resources.food > 600) {
+                        let delta = this.resources.food - 400;
+                        this.resources.gold += Math.floor(delta * 0.4);
+                        this.resources.food = 400;
+                        log.push(`Exported Excess Biomass (+${Math.floor(delta * 0.4)} Credits)`);
+                    }
+                    if (this.resources.wood < 40 && this.resources.gold >= 40) {
+                        this.resources.gold -= 40;
+                        this.resources.wood += 80;
+                        log.push(`Imported Refined Cellulose (-40 Credits)`);
+                    }
+                    if (log.length > 0) {
+                        this.addLog(`🛩️ Orbital Trade Link established: ${log.join(" | ")}`, 'warning');
+                    }
+                }
+            }
 
-                ctx.fillStyle = '#8B4513';
-                ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+            runEngineLoop() {
+                if (!this.isPaused) {
+                    for (let step = 0; step < this.gameSpeed; step++) {
+                        this.tickCount++;
+                        if (this.tickCount % 400 === 0) this.dayCount++;
 
-                ctx.fillStyle = '#DC143C';
-                ctx.beginPath();
-                ctx.moveTo(this.x - this.width / 2, this.y - this.height / 2);
-                ctx.lineTo(this.x, this.y - this.height / 2 - 12);
-                ctx.lineTo(this.x + this.width / 2, this.y - this.height / 2);
-                ctx.fill();
+                        // Engine Sub-Module ticks
+                        for (let y = 0; y < this.mapHeight; y++) {
+                            for (let x = 0; x < this.mapWidth; x++) {
+                                this.world.tiles[y][x].update();
+                            }
+                        }
+                        this.animals.forEach(a => a.update(this));
+                        
+                        this.minions.forEach((m, idx) => {
+                            m.update(this);
+                            if (m.isDead) this.minions.splice(idx, 1);
+                        });
 
-                ctx.fillStyle = '#654321';
-                ctx.fillRect(this.x - 7, this.y, 14, 18);
-
-                if (!this.isBuilt) {
-                    ctx.globalAlpha = 1;
-                    ctx.fillStyle = '#333';
-                    ctx.fillRect(this.x - 18, this.y - this.height / 2 - 22, 36, 4);
-                    ctx.fillStyle = '#FFD700';
-                    ctx.fillRect(this.x - 18, this.y - this.height / 2 - 22, (36 * this.constructionProgress) / 100, 4);
+                        if (this.tickCount % 120 === 0) this.tryPlanHouse();
+                        if (this.tickCount % 200 === 0) this.processReproductionLoop();
+                        this.processMarketTrading();
+                    }
                 }
 
-                ctx.globalAlpha = 1;
-            }
-        }
-
-        // ============================================
-        // RENDERER
-        // ============================================
-
-        class Renderer {
-            constructor(canvasElement, tileSize) {
-                this.canvas = canvasElement;
-                this.ctx = this.canvas.getContext('2d');
-                this.tileSize = tileSize;
-                this.zoom = 1;
-                this.cameraX = 0;
-                this.cameraY = 0;
+                this.renderIsometricScene();
+                this.renderUIElements();
+                requestAnimationFrame(() => this.runEngineLoop());
             }
 
-            render(game) {
-                const width = game.mapWidth * this.tileSize;
-                const height = game.mapHeight * this.tileSize;
+            renderIsometricScene() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 
-                this.canvas.width = width;
-                this.canvas.height = height;
+                // Compute centering coordinates offset projection matrices
+                let offsetX = this.canvas.width / 2;
+                let offsetY = this.canvas.height / 5;
 
-                this.ctx.fillStyle = '#556b2f';
-                this.ctx.fillRect(0, 0, width, height);
+                // Render isometric terrain tiles
+                for (let y = 0; y < this.mapHeight; y++) {
+                    for (let x = 0; x < this.mapWidth; x++) {
+                        let tile = this.world.getTile(x, y);
+                        
+                        // Iso transform transformations
+                        let isoX = (x - y) * (this.tileW / 2) + offsetX;
+                        let isoY = (x + y) * (this.tileH / 2) + offsetY;
 
-                // Draw world tiles
-                game.world.draw(this.ctx);
+                        this.drawIsoTile(isoX, isoY, tile);
+                    }
+                }
 
-                // Draw buildings
-                game.buildings.forEach(building => building.draw(this.ctx));
-
-                // Draw animals
-                game.animals.forEach(animal => animal.draw(this.ctx));
-
-                // Draw minions
-                game.minions.forEach(minion => {
-                    const isSelected = minion.id === game.selectedMinionId;
-                    minion.draw(this.ctx, isSelected);
+                // Render Wildlife Entities
+                this.animals.forEach(a => {
+                    let isoX = (a.x - a.y) * (this.tileW / 2) + offsetX;
+                    let isoY = (a.x + a.y) * (this.tileH / 2) + offsetY;
+                    this.ctx.fillStyle = "#fbbf24";
+                    this.ctx.beginPath();
+                    this.ctx.arc(isoX, isoY - 6, 4, 0, Math.PI * 2);
+                    this.ctx.fill();
                 });
 
-                // Draw stats on canvas
-                this.ctx.fillStyle = '#000';
-                this.ctx.font = 'bold 12px monospace';
-                this.ctx.fillText(`Paused: ${game.isPaused}`, 10, 20);
+                // Render Minion Vectors
+                this.minions.forEach(m => {
+                    let isoX = (m.x - m.y) * (this.tileW / 2) + offsetX;
+                    let isoY = (m.x + m.y) * (this.tileH / 2) + offsetY;
+
+                    // Neon entity base dot matrix
+                    this.ctx.fillStyle = m.sex === 'M' ? '#38bdf8' : '#f472b6';
+                    this.ctx.shadowColor = this.ctx.fillStyle;
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.beginPath();
+                    this.ctx.arc(isoX, isoY - 12, 5, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.shadowBlur = 0;
+
+                    // Tiny indicator string tags
+                    this.ctx.fillStyle = "rgba(255,255,255,0.8)";
+                    this.ctx.font = "700 8px var(--font-sans)";
+                    this.ctx.textAlign = "center";
+                    this.ctx.fillText(m.name.split(" ")[0], isoX, isoY - 22);
+                });
             }
-        }
 
-        // ============================================
-        // MAIN GAME LOOP
-        // ============================================
+            drawIsoTile(isoX, isoY, tile) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(isoX, isoY);
+                this.ctx.lineTo(isoX + this.tileW / 2, isoY + this.tileH / 2);
+                this.ctx.lineTo(isoX, isoY + this.tileH);
+                this.ctx.lineTo(isoX - this.tileW / 2, isoY + this.tileH / 2);
+                this.ctx.closePath();
 
-        const TILE_SIZE = 50;
-        const canvas = document.getElementById('canvas');
-        const game = new GameEngine(TILE_SIZE);
-        const renderer = new Renderer(canvas, TILE_SIZE);
+                // Dynamic coloring logic via rendering engine
+                let fill = "#1e293b";
+                let stroke = "rgba(255,255,255,0.02)";
 
-        // Spawn initial minions in safe zone (center)
-        const centerX = (game.mapWidth / 2) * TILE_SIZE;
-        const centerY = (game.mapHeight / 2) * TILE_SIZE;
-        for (let i = 0; i < 6; i++) {
-            const minion = new Minion(
-                centerX + (Math.random() - 0.5) * 100,
-                centerY + (Math.random() - 0.5) * 100,
-                game.minionIdCounter++
-            );
-            game.minions.push(minion);
-        }
+                switch(tile.terrain) {
+                    case 'grass': fill = "#14532d"; break;
+                    case 'tree': fill = "#052e16"; break;
+                    case 'crop': fill = "#78350f"; break;
+                    case 'stone': fill = "#334155"; break;
+                    case 'foundation': fill = "#1e1b4b"; stroke = varColor('accent-blue'); break;
+                    case 'house': fill = "#4c1d95"; break;
+                }
 
-        game.addLog(`👥 ${game.minions.length} minions spawned in settlement center`, 'success');
+                this.ctx.fillStyle = fill;
+                this.ctx.fill();
+                this.ctx.strokeStyle = stroke;
+                this.ctx.stroke();
 
-        function gameLoop() {
-            for (let i = 0; i < game.gameSpeed; i++) {
-                game.tick();
-            }
-            renderer.render(game);
-            requestAnimationFrame(gameLoop);
-        }
-
-        gameLoop();
-
-        canvas.addEventListener('click', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            for (let minion of game.minions) {
-                const dx = minion.x - x;
-                const dy = minion.y - y;
-                if (Math.sqrt(dx * dx + dy * dy) < 20) {
-                    game.selectedMinionId = minion.id;
-                    game.addLog(`👤 Selected: ${minion.name}`, 'info');
-                    return;
+                // Advanced 2026 vertical feature matrix projection
+                if (tile.terrain === 'tree' && tile.resourceAmount > 0) {
+                    this.ctx.fillStyle = "#22c55e";
+                    this.ctx.fillRect(isoX - 2, isoY - 14, 4, 12);
+                } else if (tile.terrain === 'crop' && tile.resourceAmount > 0) {
+                    this.ctx.fillStyle = "#eab308";
+                    this.ctx.fillRect(isoX - 3, isoY - 6, 6, 6);
+                } else if (tile.terrain === 'house') {
+                    // Build geometric wireframe housing cubes
+                    this.ctx.fillStyle = "#6d28d9";
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(isoX - 10, isoY);
+                    this.ctx.lineTo(isoX + 10, isoY);
+                    this.ctx.lineTo(isoX + 10, isoY - 16);
+                    this.ctx.lineTo(isoX - 10, isoY - 16);
+                    this.ctx.closePath();
+                    this.ctx.fill();
                 }
             }
 
-            game.selectedMinionId = null;
-        });
+            renderUIElements() {
+                // Fast-updating numeric dashboard inputs
+                document.getElementById('dayCounter').textContent = this.dayCount;
+                document.getElementById('tickCounter').textContent = String(this.tickCount).padStart(6, '0');
+                document.getElementById('populationCount').textContent = this.minions.length;
+                document.getElementById('animalCount').textContent = this.animals.length;
 
-        window.addEventListener('resize', () => {
-            // Canvas will resize dynamically
-        });
+                document.getElementById('inv-food').textContent = Math.floor(this.resources.food);
+                document.getElementById('inv-wood').textContent = Math.floor(this.resources.wood);
+                document.getElementById('inv-stone').textContent = Math.floor(this.resources.stone);
+                document.getElementById('inv-gold').textContent = Math.floor(this.resources.gold);
+                document.getElementById('inv-beds').textContent = this.beds;
+                document.getElementById('inv-houses').textContent = this.resources.houses;
+
+                // Event logs generation strings mapping
+                document.getElementById('settlementLog').innerHTML = this.gameLog.map(l => 
+                    `<div class="log-entry ${l.type}"><strong>${l.stamp}</strong>${l.message}</div>`
+                ).join('');
+
+                // Render complex layout vital condition parameters panels
+                document.getElementById('minionStatus').innerHTML = this.minions.slice(0, 4).map(m => {
+                    let hungerColor = m.hunger > 75 ? 'var(--accent-rose)' : m.hunger > 45 ? 'var(--accent-amber)' : 'var(--accent-green)';
+                    let energyColor = m.energy < 25 ? 'var(--accent-rose)' : 'var(--accent-blue)';
+                    return `
+                        <div class="minion-card">
+                            <div class="minion-header">
+                                <span class="minion-identity">${m.name} (${m.sex})</span>
+                                <span class="minion-task-badge">${m.currentTask.replace('_',' ')}</span>
+                            </div>
+                            <div class="minion-traits">Age: ${Math.floor(m.age)} cycles | Libido: ${Math.floor(m.libido)}%</div>
+                            <div class="minion-stat-bar">
+                                <div class="bar-labels"><span>Caloric Reserve</span><span>${Math.floor(100 - m.hunger)}%</span></div>
+                                <div class="bar-container"><div class="bar-fill" style="width: ${100 - m.hunger}%; background: ${hungerColor};"></div></div>
+                            </div>
+                            <div class="minion-stat-bar">
+                                <div class="bar-labels"><span>Cellular Battery</span><span>${Math.floor(m.energy)}%</span></div>
+                                <div class="bar-container"><div class="bar-fill" style="width: ${m.energy}%; background: ${energyColor};"></div></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function varColor(name) { return getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).strip; }
+
+        // Start Execution Initialization System Loop Instantiation
+        const game = new GameEngine();
+        game.runEngineLoop();
     </script>
 </body>
 </html>
