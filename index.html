@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minions Survival Simulator</title>
+    <title>Minion Survival Simulation - RimWorld/Sims Hybrid</title>
     <style>
         * {
             margin: 0;
@@ -12,175 +12,222 @@
         }
 
         body {
-            font-family: 'Arial', sans-serif;
-            background: #2c3e50;
-            display: flex;
-            gap: 10px;
-            padding: 10px;
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #e0e0e0;
             height: 100vh;
             overflow: hidden;
+            display: flex;
         }
 
-        #gameContainer {
+        #gameViewport {
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: #34495e;
-            border-radius: 8px;
-            padding: 10px;
+            background: #2a2a2a;
+            border-right: 2px solid #444;
         }
 
         #topBar {
+            background: #1a1a1a;
+            border-bottom: 2px solid #444;
+            padding: 10px 15px;
             display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-            background: #2c3e50;
-            padding: 10px;
-            border-radius: 5px;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .stat-display {
+            display: flex;
+            gap: 20px;
+            font-size: 12px;
             flex-wrap: wrap;
         }
 
-        button {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
+        .stat-item {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .stat-label {
+            color: #f39c12;
             font-weight: bold;
+        }
+
+        .stat-value {
+            color: #3498db;
+            min-width: 50px;
+        }
+
+        #canvas {
+            flex: 1;
+            background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 100%);
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        #sidebar {
+            width: 400px;
+            background: #1a1a1a;
+            border-left: 2px solid #444;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-bottom: 2px solid #444;
+            overflow: hidden;
+        }
+
+        .sidebar-section:last-child {
+            border-bottom: none;
+        }
+
+        .section-header {
+            background: #2a2a2a;
+            padding: 10px 12px;
+            border-bottom: 1px solid #444;
+            font-weight: bold;
+            color: #f39c12;
             font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .section-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-size: 11px;
+        }
+
+        .log-entry {
+            padding: 5px 8px;
+            margin: 3px 0;
+            background: rgba(100, 150, 200, 0.15);
+            border-left: 2px solid #3498db;
+            border-radius: 2px;
+            line-height: 1.4;
+        }
+
+        .log-entry.success {
+            border-left-color: #2ecc71;
+            background: rgba(46, 204, 113, 0.15);
+        }
+
+        .log-entry.warning {
+            border-left-color: #f39c12;
+            background: rgba(243, 156, 18, 0.15);
+        }
+
+        .log-entry.danger {
+            border-left-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.15);
+        }
+
+        .inventory-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 8px;
+            margin: 3px 0;
+            background: rgba(100, 150, 200, 0.1);
+            border-radius: 2px;
+            font-size: 11px;
+        }
+
+        .inventory-label {
+            color: #e0e0e0;
+        }
+
+        .inventory-value {
+            color: #2ecc71;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .minion-card {
+            background: rgba(52, 152, 219, 0.2);
+            border: 1px solid #3498db;
+            border-radius: 3px;
+            padding: 8px;
+            margin: 5px 0;
+            font-size: 10px;
+        }
+
+        .minion-name {
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 5px;
+        }
+
+        .minion-stat-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 3px 0;
+            font-size: 9px;
+        }
+
+        .stat-bar-fill {
+            flex: 1;
+            height: 8px;
+            background: #333;
+            border-radius: 2px;
+            margin: 0 5px;
+            overflow: hidden;
+        }
+
+        .stat-bar-inner {
+            height: 100%;
+            background: #3498db;
+            transition: width 0.2s;
+        }
+
+        .stat-bar-inner.danger {
+            background: #e74c3c;
+        }
+
+        .stat-bar-inner.warning {
+            background: #f39c12;
+        }
+
+        .stat-bar-inner.good {
+            background: #2ecc71;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: 1px solid #2980b9;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
             transition: 0.2s;
         }
 
         button:hover {
-            background: #c0392b;
-            transform: scale(1.05);
+            background: #2980b9;
         }
 
         button:active {
             transform: scale(0.95);
         }
 
-        .controls {
+        .control-buttons {
             display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .controls input {
-            width: 100px;
-        }
-
-        canvas {
-            flex: 1;
-            background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 100%);
-            border: 3px solid #fff;
-            border-radius: 5px;
-            cursor: crosshair;
-        }
-
-        #sidebar {
-            width: 300px;
-            background: #2c3e50;
-            border: 2px solid #fff;
-            border-radius: 8px;
-            padding: 15px;
-            overflow-y: auto;
-            color: white;
-            display: flex;
-            flex-direction: column;
-        }
-
-        #sidebar h2 {
-            margin-bottom: 15px;
-            color: #f39c12;
-            border-bottom: 2px solid #f39c12;
-            padding-bottom: 10px;
-        }
-
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 8px 0;
-            font-size: 12px;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 8px;
-            border-radius: 4px;
-        }
-
-        .minion-info {
-            background: rgba(255, 255, 255, 0.15);
-            padding: 10px;
-            margin: 8px 0;
-            border-radius: 4px;
-            border-left: 3px solid #f39c12;
-            font-size: 11px;
-        }
-
-        .minion-info h3 {
-            color: #f39c12;
-            margin-bottom: 5px;
-        }
-
-        .minion-stat {
-            display: flex;
-            justify-content: space-between;
-            margin: 3px 0;
-        }
-
-        .status {
-            padding: 5px 10px;
-            background: rgba(52, 152, 219, 0.3);
-            border-radius: 3px;
-            margin: 5px 0;
-            font-size: 11px;
-        }
-
-        .build-menu {
-            position: absolute;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            z-index: 1000;
-            font-size: 12px;
-            border: 2px solid #f39c12;
-        }
-
-        .build-option {
-            padding: 5px;
-            cursor: pointer;
-            margin: 3px 0;
-            background: #34495e;
-            border-radius: 3px;
-            transition: 0.2s;
-        }
-
-        .build-option:hover {
-            background: #f39c12;
-            color: black;
-        }
-
-        .chat-bubble {
-            position: absolute;
-            background: white;
-            color: black;
-            padding: 5px 10px;
-            border-radius: 10px;
-            font-size: 10px;
-            border: 2px solid #000;
-            max-width: 80px;
-            text-align: center;
-            pointer-events: none;
-            z-index: 100;
-        }
-
-        #speedControl {
-            padding: 5px 10px;
-            background: #34495e;
-            color: white;
-            border-radius: 4px;
-            font-weight: bold;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
         ::-webkit-scrollbar {
@@ -188,435 +235,539 @@
         }
 
         ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
+            background: #2a2a2a;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #f39c12;
+            background: #444;
             border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
     </style>
 </head>
 <body>
-    <div id="gameContainer">
+    <div id="gameViewport">
         <div id="topBar">
-            <button onclick="game.addMinion()">👥 Add Minion</button>
-            <button onclick="game.buildingMode = !game.buildingMode">🏠 Build Mode</button>
-            <button onclick="game.triggerDisaster('earthquake')">🌍 Earthquake</button>
-            <button onclick="game.triggerDisaster('fire')">🔥 Fire</button>
-            <button onclick="game.triggerDisaster('tornado')">🌪️ Tornado</button>
-            <button onclick="game.triggerDisaster('rain')">🌧️ Heavy Rain</button>
-            <button onclick="game.triggerDisaster('plague')">☠️ Plague</button>
-            <button onclick="game.resetSim()">🔄 Reset</button>
-            <div class="controls">
-                <label style="color: white; font-size: 12px;">Speed: </label>
-                <input type="range" min="0.5" max="3" step="0.5" value="1" onchange="game.gameSpeed = this.value" style="width: 80px;">
+            <div class="stat-display">
+                <div class="stat-item">
+                    <span class="stat-label">DAY:</span>
+                    <span class="stat-value" id="dayCounter">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">TICK:</span>
+                    <span class="stat-value" id="tickCounter">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">POPULATION:</span>
+                    <span class="stat-value" id="populationCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">SPEED:</span>
+                    <span class="stat-value" id="speedDisplay">1x</span>
+                </div>
+            </div>
+            <div class="control-buttons">
+                <button onclick="game.togglePause()">▶ PLAY</button>
+                <button onclick="game.setGameSpeed(0.5)">0.5x</button>
+                <button onclick="game.setGameSpeed(1)">1x</button>
+                <button onclick="game.setGameSpeed(2)">2x</button>
+                <button onclick="game.setGameSpeed(4)">4x</button>
             </div>
         </div>
         <canvas id="canvas"></canvas>
     </div>
 
     <div id="sidebar">
-        <h2>⏱️ World Stats</h2>
-        <div class="stat-row">
-            <span>Day:</span>
-            <span id="dayCount">0</span>
+        <div class="sidebar-section">
+            <div class="section-header">📦 SETTLEMENT INVENTORY</div>
+            <div class="section-content">
+                <div class="inventory-row">
+                    <span class="inventory-label">🍖 Food:</span>
+                    <span class="inventory-value" id="inv-food">0</span>
+                </div>
+                <div class="inventory-row">
+                    <span class="inventory-label">🌳 Wood:</span>
+                    <span class="inventory-value" id="inv-wood">0</span>
+                </div>
+                <div class="inventory-row">
+                    <span class="inventory-label">🪨 Stone:</span>
+                    <span class="inventory-value" id="inv-stone">0</span>
+                </div>
+                <div class="inventory-row">
+                    <span class="inventory-label">💰 Gold:</span>
+                    <span class="inventory-value" id="inv-gold">0</span>
+                </div>
+                <div class="inventory-row">
+                    <span class="inventory-label">🛏️ Beds:</span>
+                    <span class="inventory-value" id="inv-beds">0</span>
+                </div>
+                <div class="inventory-row">
+                    <span class="inventory-label">🏠 Houses:</span>
+                    <span class="inventory-value" id="inv-houses">0</span>
+                </div>
+            </div>
         </div>
-        <div class="stat-row">
-            <span>Season:</span>
-            <span id="season">Spring</span>
+
+        <div class="sidebar-section">
+            <div class="section-header">📜 SETTLEMENT LOG</div>
+            <div class="section-content" id="settlementLog"></div>
         </div>
-        <div class="stat-row">
-            <span>Weather:</span>
-            <span id="weather">Clear</span>
-        </div>
-        <div class="stat-row">
-            <span>Minions:</span>
-            <span id="minionCount">0</span>
-        </div>
-        <div class="stat-row">
-            <span>Houses:</span>
-            <span id="houseCount">0</span>
-        </div>
-        <div class="stat-row">
-            <span>Crops:</span>
-            <span id="cropCount">0</span>
-        </div>
-        <div class="stat-row">
-            <span>Avg Health:</span>
-            <span id="avgHealth">100%</span>
-        </div>
-        <hr style="margin: 15px 0; opacity: 0.3;">
-        <h2>👤 Selected Minion</h2>
-        <div id="minionDetails">
-            <div style="opacity: 0.5;">Click a minion to view details</div>
+
+        <div class="sidebar-section">
+            <div class="section-header">👤 MINION STATUS</div>
+            <div class="section-content" id="minionStatus"></div>
         </div>
     </div>
 
     <script>
-        // ===== GAME ENGINE =====
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth - 330;
-        canvas.height = window.innerHeight - 80;
+        // ============================================
+        // GLOBAL GAME ENGINE
+        // ============================================
 
-        class Game {
+        class GameEngine {
             constructor() {
-                this.minions = [];
-                this.buildings = [];
-                this.crops = [];
-                this.particles = [];
-                this.day = 0;
-                this.dayPhase = 0;
+                this.tickCount = 0;
+                this.dayCount = 0;
+                this.isPaused = false;
                 this.gameSpeed = 1;
-                this.buildingMode = false;
-                this.selectedMinion = null;
-                this.weather = 'clear'; // clear, rain, snow, storm
-                this.temperature = 20;
-                this.disasterTimer = 0;
-                this.disasterType = null;
-                this.frameCount = 0;
-                this.fps = 0;
-                this.lastFpsTime = Date.now();
-
-                // Start with some minions
-                for (let i = 0; i < 3; i++) {
-                    this.addMinion();
-                }
+                this.selectedMinionId = null;
+                
+                // World state
+                this.minions = [];
+                this.minionIdCounter = 0;
+                this.buildings = [];
+                this.buildingIdCounter = 0;
+                this.resources = {
+                    food: 100,
+                    wood: 50,
+                    stone: 50,
+                    gold: 20
+                };
+                this.beds = 10;
+                
+                // World map
+                this.mapWidth = 40;
+                this.mapHeight = 30;
+                this.worldMap = [];
+                this.initializeWorldMap();
+                
+                // Game state
+                this.gameLog = [];
+                this.tradeLog = [];
+                this.lastTradeCaravan = 0;
+                this.caravanArrivalInterval = 200; // Every 200 ticks
             }
 
-            addMinion() {
-                if (this.minions.length >= 50) return;
-                const minion = new Minion(
-                    Math.random() * (canvas.width - 100) + 50,
-                    Math.random() * (canvas.height - 100) + 50,
-                    `Minion_${this.minions.length + 1}`
-                );
-                this.minions.push(minion);
-            }
-
-            buildingMode_toggle() {
-                this.buildingMode = !this.buildingMode;
-            }
-
-            triggerDisaster(type) {
-                this.disasterType = type;
-                this.disasterTimer = 60;
-
-                if (type === 'earthquake') {
-                    this.createEarthquake();
-                } else if (type === 'fire') {
-                    this.createFire();
-                } else if (type === 'tornado') {
-                    this.createTornado();
-                } else if (type === 'rain') {
-                    this.weather = 'rain';
-                    this.createRainParticles();
-                } else if (type === 'plague') {
-                    this.minions.forEach(m => {
-                        if (Math.random() < 0.3) m.health -= 30;
-                    });
-                }
-            }
-
-            createEarthquake() {
-                this.minions.forEach(m => {
-                    m.vx = (Math.random() - 0.5) * 8;
-                    m.vy = (Math.random() - 0.5) * 8;
-                    m.health -= 10;
-                });
-                this.buildings.forEach(b => {
-                    b.health -= 20;
-                });
-            }
-
-            createFire() {
-                const randomBuilding = this.buildings[Math.floor(Math.random() * this.buildings.length)];
-                if (randomBuilding) {
-                    randomBuilding.onFire = true;
-                    randomBuilding.health -= 40;
-                }
-            }
-
-            createTornado() {
-                const centerX = Math.random() * canvas.width;
-                const centerY = Math.random() * canvas.height;
-                this.minions.forEach(m => {
-                    const dx = m.x - centerX;
-                    const dy = m.y - centerY;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < 150) {
-                        m.vx = (dx / dist) * 10;
-                        m.vy = (dy / dist) * 10;
-                        m.health -= 20;
+            initializeWorldMap() {
+                this.worldMap = [];
+                for (let y = 0; y < this.mapHeight; y++) {
+                    const row = [];
+                    for (let x = 0; x < this.mapWidth; x++) {
+                        const rand = Math.random();
+                        let terrain = 'grass';
+                        if (rand < 0.1) terrain = 'forest';
+                        if (rand < 0.05) terrain = 'stone';
+                        row.push({ terrain, resourceNode: null });
                     }
-                });
+                    this.worldMap.push(row);
+                }
+                this.addInitialResources();
             }
 
-            createRainParticles() {
-                for (let i = 0; i < 50; i++) {
-                    this.particles.push({
-                        x: Math.random() * canvas.width,
-                        y: Math.random() * canvas.height,
-                        vx: 0,
-                        vy: 3,
-                        type: 'rain'
-                    });
+            addInitialResources() {
+                // Scatter resource nodes
+                for (let i = 0; i < 5; i++) {
+                    const x = Math.floor(Math.random() * this.mapWidth);
+                    const y = Math.floor(Math.random() * this.mapHeight);
+                    this.worldMap[y][x].resourceNode = { type: 'wood', amount: 50 };
+                }
+                for (let i = 0; i < 3; i++) {
+                    const x = Math.floor(Math.random() * this.mapWidth);
+                    const y = Math.floor(Math.random() * this.mapHeight);
+                    this.worldMap[y][x].resourceNode = { type: 'stone', amount: 40 };
                 }
             }
 
-            update() {
-                this.frameCount++;
+            togglePause() {
+                this.isPaused = !this.isPaused;
+            }
 
-                // Update day/night cycle
-                this.dayPhase += 0.01 * this.gameSpeed;
-                if (this.dayPhase >= 1) {
-                    this.dayPhase = 0;
-                    this.day++;
-                    this.onNewDay();
-                }
+            setGameSpeed(speed) {
+                this.gameSpeed = speed;
+                document.getElementById('speedDisplay').textContent = speed + 'x';
+            }
 
-                // Update weather
-                if (Math.random() < 0.001 * this.gameSpeed) {
-                    const weathers = ['clear', 'rain', 'snow'];
-                    this.weather = weathers[Math.floor(Math.random() * weathers.length)];
-                    if (this.weather === 'rain') this.createRainParticles();
+            tick() {
+                if (this.isPaused) return;
+
+                this.tickCount++;
+                if (this.tickCount % 60 === 0) {
+                    this.dayCount++;
                 }
 
                 // Update minions
-                this.minions = this.minions.filter(m => {
-                    m.update(this);
-                    return m.health > 0;
-                });
+                for (let i = this.minions.length - 1; i >= 0; i--) {
+                    this.minions[i].update(this);
+                    if (this.minions[i].isDead) {
+                        this.addLog(`☠️ ${this.minions[i].name} has died.`, 'danger');
+                        this.minions.splice(i, 1);
+                    }
+                }
+
+                // Auto-spawn minions occasionally
+                if (this.tickCount % 300 === 0 && this.minions.length < 20) {
+                    // Check if we can birth new minions
+                    this.attemptReproduction();
+                }
 
                 // Update buildings
-                this.buildings.forEach(b => b.update());
+                this.buildings.forEach(b => b.update(this));
 
-                // Update particles
-                this.particles = this.particles.filter(p => {
-                    p.y += p.vy;
-                    p.x += p.vx;
-                    return p.y < canvas.height;
-                });
-
-                // Update disaster
-                if (this.disasterTimer > 0) {
-                    this.disasterTimer--;
+                // Auto-build houses when resources allow
+                if (this.tickCount % 30 === 0) {
+                    this.tryBuildHouse();
                 }
 
-                // Update FPS
-                const now = Date.now();
-                if (now - this.lastFpsTime >= 1000) {
-                    this.fps = this.frameCount;
-                    this.frameCount = 0;
-                    this.lastFpsTime = now;
+                // Minion foraging and hunting
+                if (this.tickCount % 15 === 0) {
+                    this.updateForagingHunting();
                 }
 
+                // Trade caravan
+                if (this.tickCount - this.lastTradeCaravan >= this.caravanArrivalInterval) {
+                    this.tradeWithCaravan();
+                    this.lastTradeCaravan = this.tickCount;
+                }
+
+                // Update UI
                 this.updateUI();
             }
 
-            onNewDay() {
-                // Feed minions daily needs
-                this.minions.forEach(m => {
-                    m.hunger += 20;
-                    m.energy -= 10;
-                    if (m.hunger > 100) m.hunger = 100;
-                });
+            attemptReproduction() {
+                if (this.minions.length < 2) return;
 
-                // Crops grow
-                this.crops.forEach(c => {
-                    c.growth += Math.random() * 10;
-                    if (c.growth >= 100) {
-                        this.minions.forEach(m => {
-                            if (Math.sqrt((m.x - c.x) ** 2 + (m.y - c.y) ** 2) < 100) {
-                                m.hunger = Math.max(0, m.hunger - 30);
-                            }
-                        });
-                        c.growth = 0;
+                for (let i = 0; i < this.minions.length; i++) {
+                    if (this.minions[i].age < 20) continue; // Too young
+                    if (this.minions[i].libido < 70) continue;
+
+                    for (let j = i + 1; j < this.minions.length; j++) {
+                        if (this.minions[j].age < 20) continue;
+                        if (this.minions[j].libido < 70) continue;
+                        if (this.minions[i].sex === this.minions[j].sex) continue; // Different sex
+
+                        const dx = this.minions[i].x - this.minions[j].x;
+                        const dy = this.minions[i].y - this.minions[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < 30) {
+                            // Birth!
+                            const newMinion = new Minion(
+                                this.minions[i].x + Math.random() * 10 - 5,
+                                this.minions[i].y + Math.random() * 10 - 5,
+                                this.minionIdCounter++
+                            );
+                            newMinion.age = 0;
+                            this.minions.push(newMinion);
+                            this.minions[i].libido = 0;
+                            this.minions[j].libido = 0;
+                            this.addLog(`👶 New minion born: ${newMinion.name}`, 'success');
+                            return;
+                        }
                     }
-                });
+                }
+            }
+
+            tryBuildHouse() {
+                if (this.resources.wood < 50 || this.resources.stone < 50) return;
+                if (this.buildings.length >= 15) return; // Max houses
+
+                const x = Math.floor(Math.random() * (this.mapWidth - 5)) + 2;
+                const y = Math.floor(Math.random() * (this.mapHeight - 5)) + 2;
+
+                const building = new Building(x, y, 'house', this.buildingIdCounter++);
+                this.buildings.push(building);
+
+                this.resources.wood -= 50;
+                this.resources.stone -= 50;
+                this.beds += 2;
+                this.addLog(`🏠 New house blueprint at (${x}, ${y})`, 'success');
+            }
+
+            updateForagingHunting() {
+                for (let minion of this.minions) {
+                    if (minion.hunger > 60) {
+                        // Look for food sources
+                        for (let y = Math.max(0, minion.gridY - 5); y < Math.min(this.mapHeight, minion.gridY + 5); y++) {
+                            for (let x = Math.max(0, minion.gridX - 5); x < Math.min(this.mapWidth, minion.gridX + 5); x++) {
+                                if (this.worldMap[y][x].resourceNode && this.worldMap[y][x].resourceNode.type === 'wood') {
+                                    const node = this.worldMap[y][x].resourceNode;
+                                    const harvested = Math.min(10, node.amount);
+                                    this.resources.wood += harvested;
+                                    node.amount -= harvested;
+                                    minion.hunger = Math.max(0, minion.hunger - 15);
+                                    if (node.amount <= 0) {
+                                        this.worldMap[y][x].resourceNode = null;
+                                    }
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            tradeWithCaravan() {
+                let tradeLog = [];
+                
+                // Sell surplus food
+                if (this.resources.food > 500) {
+                    const surplus = this.resources.food - 300;
+                    const goldEarned = Math.floor(surplus * 0.5);
+                    this.resources.food = 300;
+                    this.resources.gold += goldEarned;
+                    tradeLog.push(`📊 Sold ${surplus} Food for ${goldEarned} Gold`);
+                }
+
+                // Buy wood if low
+                if (this.resources.wood < 50 && this.resources.gold >= 20) {
+                    const goldSpent = 20;
+                    this.resources.gold -= goldSpent;
+                    this.resources.wood += 40;
+                    tradeLog.push(`📊 Bought 40 Wood for ${goldSpent} Gold`);
+                }
+
+                // Buy stone if low
+                if (this.resources.stone < 50 && this.resources.gold >= 15) {
+                    const goldSpent = 15;
+                    this.resources.gold -= goldSpent;
+                    this.resources.stone += 30;
+                    tradeLog.push(`📊 Bought 30 Stone for ${goldSpent} Gold`);
+                }
+
+                if (tradeLog.length > 0) {
+                    this.addLog(`🛒 Caravan arrived: ${tradeLog.join('; ')}`, 'success');
+                }
+            }
+
+            addLog(message, type = 'info') {
+                const timestamp = `Day ${this.dayCount}`;
+                const entry = { message, type, timestamp };
+                this.gameLog.unshift(entry);
+                if (this.gameLog.length > 50) this.gameLog.pop();
             }
 
             updateUI() {
-                document.getElementById('dayCount').textContent = this.day;
-                document.getElementById('minionCount').textContent = this.minions.length;
-                document.getElementById('houseCount').textContent = this.buildings.filter(b => b.type === 'house').length;
-                document.getElementById('cropCount').textContent = this.crops.length;
-                
-                const avgHealth = this.minions.length > 0 
-                    ? Math.round(this.minions.reduce((a, b) => a + b.health, 0) / this.minions.length)
-                    : 0;
-                document.getElementById('avgHealth').textContent = avgHealth + '%';
+                // Top bar
+                document.getElementById('dayCounter').textContent = this.dayCount;
+                document.getElementById('tickCounter').textContent = this.tickCount;
+                document.getElementById('populationCount').textContent = this.minions.length;
 
-                const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
-                const season = seasons[Math.floor((this.day / 30) % 4)];
-                document.getElementById('season').textContent = season;
-                document.getElementById('weather').textContent = this.weather.toUpperCase();
+                // Inventory
+                document.getElementById('inv-food').textContent = this.resources.food;
+                document.getElementById('inv-wood').textContent = this.resources.wood;
+                document.getElementById('inv-stone').textContent = this.resources.stone;
+                document.getElementById('inv-gold').textContent = this.resources.gold;
+                document.getElementById('inv-beds').textContent = this.beds;
+                document.getElementById('inv-houses').textContent = this.buildings.length;
 
-                if (this.selectedMinion && this.minions.includes(this.selectedMinion)) {
-                    const m = this.selectedMinion;
-                    document.getElementById('minionDetails').innerHTML = `
-                        <div class="minion-info">
-                            <h3>${m.name}</h3>
-                            <div class="minion-stat">
-                                <span>Health:</span>
-                                <span>${Math.round(m.health)}%</span>
-                            </div>
-                            <div class="minion-stat">
-                                <span>Hunger:</span>
-                                <span>${Math.round(m.hunger)}%</span>
-                            </div>
-                            <div class="minion-stat">
-                                <span>Energy:</span>
-                                <span>${Math.round(m.energy)}%</span>
-                            </div>
-                            <div class="minion-stat">
-                                <span>Happiness:</span>
-                                <span>${Math.round(m.happiness)}%</span>
-                            </div>
-                            <div class="minion-stat">
-                                <span>Status:</span>
-                                <span>${m.currentTask}</span>
-                            </div>
-                        </div>
-                    `;
+                // Settlement log
+                const logHtml = this.gameLog.map(entry => 
+                    `<div class="log-entry ${entry.type}"><strong>${entry.timestamp}:</strong> ${entry.message}</div>`
+                ).join('');
+                document.getElementById('settlementLog').innerHTML = logHtml || '<div style="opacity: 0.5;">No events yet...</div>';
+
+                // Minion status
+                if (this.selectedMinionId !== null) {
+                    const minion = this.minions.find(m => m.id === this.selectedMinionId);
+                    if (minion) {
+                        document.getElementById('minionStatus').innerHTML = this.getMinionStatusHtml(minion);
+                    } else {
+                        this.selectedMinionId = null;
+                        document.getElementById('minionStatus').innerHTML = '<div style="opacity: 0.5;">Click on canvas to select a minion</div>';
+                    }
                 } else {
-                    document.getElementById('minionDetails').innerHTML = '<div style="opacity: 0.5;">Click a minion to view details</div>';
-                }
-            }
-
-            draw() {
-                // Sky gradient
-                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-                const skyColor = this.dayPhase < 0.5 ? 
-                    `hsl(200, 100%, ${50 + this.dayPhase * 20}%)` :
-                    `hsl(200, 100%, ${60 - (this.dayPhase - 0.5) * 20}%)`;
-                gradient.addColorStop(0, skyColor);
-                gradient.addColorStop(1, '#E0F6FF');
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                // Draw particles (rain/snow)
-                this.particles.forEach(p => {
-                    if (p.type === 'rain') {
-                        ctx.strokeStyle = 'rgba(100, 150, 255, 0.5)';
-                        ctx.lineWidth = 2;
-                        ctx.beginPath();
-                        ctx.moveTo(p.x, p.y);
-                        ctx.lineTo(p.x, p.y + 10);
-                        ctx.stroke();
-                    }
-                });
-
-                // Draw buildings
-                this.buildings.forEach(b => b.draw());
-
-                // Draw crops
-                this.crops.forEach(c => c.draw());
-
-                // Draw minions
-                this.minions.forEach(m => m.draw(m === this.selectedMinion));
-
-                // Disaster effect
-                if (this.disasterTimer > 0) {
-                    ctx.fillStyle = `rgba(255, 0, 0, ${(this.disasterTimer / 60) * 0.3})`;
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                }
-            }
-
-            resetSim() {
-                this.minions = [];
-                this.buildings = [];
-                this.crops = [];
-                this.day = 0;
-                this.dayPhase = 0;
-                for (let i = 0; i < 3; i++) {
-                    this.addMinion();
-                }
-            }
-
-            handleCanvasClick(x, y) {
-                // Check if clicked on minion
-                for (let m of this.minions) {
-                    if (Math.sqrt((m.x - x) ** 2 + (m.y - y) ** 2) < 20) {
-                        this.selectedMinion = m;
-                        m.showChatBubble(`Hello!`);
-                        return;
+                    if (this.minions.length > 0) {
+                        const topMinions = this.minions.slice(0, 3);
+                        document.getElementById('minionStatus').innerHTML = topMinions.map(m => 
+                            this.getMinionStatusHtml(m)
+                        ).join('');
+                    } else {
+                        document.getElementById('minionStatus').innerHTML = '<div style="opacity: 0.5;">No minions yet...</div>';
                     }
                 }
+            }
 
-                if (this.buildingMode) {
-                    const building = new Building(x, y, 'house');
-                    this.buildings.push(building);
-                    this.buildingMode = false;
-                }
+            getMinionStatusHtml(minion) {
+                const hungerPercent = (minion.hunger / 100) * 100;
+                const energyPercent = (minion.energy / 100) * 100;
+                const libisoPercent = (minion.libido / 100) * 100;
+                const agePercent = (minion.age / 100) * 100;
+
+                const hungerClass = minion.hunger > 80 ? 'danger' : minion.hunger > 50 ? 'warning' : 'good';
+                const energyClass = minion.energy < 20 ? 'danger' : minion.energy < 50 ? 'warning' : 'good';
+
+                return `
+                    <div class="minion-card">
+                        <div class="minion-name">${minion.name} ${minion.sex === 'M' ? '♂' : '♀'}</div>
+                        <div class="minion-stat-bar">
+                            <span>AGE:</span>
+                            <div class="stat-bar-fill"><div class="stat-bar-inner good" style="width: ${Math.min(agePercent, 100)}%"></div></div>
+                            <span>${minion.age}</span>
+                        </div>
+                        <div class="minion-stat-bar">
+                            <span>HUNGER:</span>
+                            <div class="stat-bar-fill"><div class="stat-bar-inner ${hungerClass}" style="width: ${hungerPercent}%"></div></div>
+                            <span>${Math.round(minion.hunger)}</span>
+                        </div>
+                        <div class="minion-stat-bar">
+                            <span>ENERGY:</span>
+                            <div class="stat-bar-fill"><div class="stat-bar-inner ${energyClass}" style="width: ${energyPercent}%"></div></div>
+                            <span>${Math.round(minion.energy)}</span>
+                        </div>
+                        <div class="minion-stat-bar">
+                            <span>LIBIDO:</span>
+                            <div class="stat-bar-fill"><div class="stat-bar-inner" style="width: ${libisoPercent}%; background: #e91e63;"></div></div>
+                            <span>${Math.round(minion.libido)}</span>
+                        </div>
+                        <div style="margin-top: 8px; font-size: 10px; color: #aaa;">
+                            Task: <span style="color: #3498db; font-weight: bold;">${minion.currentTask}</span>
+                        </div>
+                    </div>
+                `;
             }
         }
 
+        // ============================================
+        // MINION ENTITY
+        // ============================================
+
         class Minion {
-            constructor(x, y, name) {
+            constructor(x, y, id) {
+                this.id = id;
+                this.name = this.generateName();
+                this.sex = Math.random() < 0.5 ? 'M' : 'F';
+                this.age = 20 + Math.random() * 30;
+                
+                // Physics
                 this.x = x;
                 this.y = y;
-                this.name = name;
+                this.gridX = Math.floor(x / 20);
+                this.gridY = Math.floor(y / 20);
                 this.vx = 0;
                 this.vy = 0;
-                this.health = 100;
-                this.hunger = 30;
-                this.energy = 100;
-                this.happiness = 75;
+                
+                // Biology
+                this.hunger = 40 + Math.random() * 30;
+                this.energy = 70 + Math.random() * 30;
+                this.libido = Math.random() * 50;
+                this.isDead = false;
+                
+                // AI State
                 this.currentTask = 'wandering';
                 this.taskTimer = 0;
-                this.chatBubble = null;
-                this.chatBubbleTimer = 0;
+                this.targetX = null;
+                this.targetY = null;
             }
 
-            update(game) {
-                // Movement
-                if (Math.random() < 0.01) {
-                    this.vx = (Math.random() - 0.5) * 2;
-                    this.vy = (Math.random() - 0.5) * 2;
-                }
+            generateName() {
+                const names = ['Bob', 'Alice', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 
+                              'Iris', 'Jack', 'Kate', 'Leo', 'Mia', 'Noah', 'Olivia', 'Peter'];
+                return names[Math.floor(Math.random() * names.length)] + '_' + Math.floor(Math.random() * 1000);
+            }
 
-                this.x += this.vx * game.gameSpeed;
-                this.y += this.vy * game.gameSpeed;
+            update(engine) {
+                // Age progression
+                this.age += 0.01;
 
-                // Boundaries
-                if (this.x < 10) this.x = 10;
-                if (this.x > canvas.width - 10) this.x = canvas.width - 10;
-                if (this.y < 10) this.y = 10;
-                if (this.y > canvas.height - 10) this.y = canvas.height - 10;
-
-                // Health degradation
-                this.health -= 0.05 * game.gameSpeed;
-                this.energy -= 0.02 * game.gameSpeed;
-                if (this.hunger > 0) this.hunger -= 0.08 * game.gameSpeed;
-                if (this.hunger < 0) this.hunger = 0;
-
-                // Death from starvation
-                if (this.hunger >= 100 && this.health > 0) {
-                    this.health -= 0.5 * game.gameSpeed;
-                }
+                // Stat degradation
+                this.hunger += 0.1;
+                this.energy -= 0.08;
+                this.libido += 0.02;
 
                 // Cap stats
-                this.health = Math.max(0, Math.min(100, this.health));
-                this.energy = Math.max(0, Math.min(100, this.energy));
-                this.happiness = Math.max(0, Math.min(100, this.happiness));
+                this.hunger = Math.min(100, this.hunger);
+                this.energy = Math.max(0, this.energy);
+                this.libido = Math.min(100, this.libido);
 
-                // Update chat bubble
-                if (this.chatBubbleTimer > 0) {
-                    this.chatBubbleTimer--;
+                // Death conditions
+                if (this.hunger >= 100) {
+                    this.isDead = true;
+                    return;
                 }
+
+                if (this.energy <= 0) {
+                    this.currentTask = 'sleeping';
+                    this.energy = Math.min(100, this.energy + 0.5);
+                    if (this.energy >= 50) {
+                        this.currentTask = 'wandering';
+                    }
+                }
+
+                // State machine
+                if (this.hunger > 80) {
+                    this.currentTask = 'eating';
+                } else if (this.energy < 20) {
+                    this.currentTask = 'sleeping';
+                } else if (this.currentTask === 'eating' && this.hunger < 40) {
+                    this.currentTask = 'wandering';
+                } else if (this.currentTask === 'sleeping' && this.energy > 60) {
+                    this.currentTask = 'wandering';
+                }
+
+                // Movement
+                if (this.currentTask === 'wandering') {
+                    if (Math.random() < 0.02) {
+                        this.vx = (Math.random() - 0.5) * 3;
+                        this.vy = (Math.random() - 0.5) * 3;
+                    }
+                } else if (this.currentTask === 'eating') {
+                    // Move towards settlement center (rough approximation)
+                    if (!this.targetX) {
+                        this.targetX = 50;
+                        this.targetY = 50;
+                    }
+                    const dx = this.targetX - this.x;
+                    const dy = this.targetY - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 5) {
+                        this.hunger = Math.max(0, this.hunger - 10);
+                        this.energy = Math.max(0, this.energy - 5);
+                    } else {
+                        this.vx = (dx / dist) * 1.5;
+                        this.vy = (dy / dist) * 1.5;
+                    }
+                } else if (this.currentTask === 'sleeping') {
+                    this.vx *= 0.9;
+                    this.vy *= 0.9;
+                }
+
+                // Apply movement
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Boundary check
+                const canvasWidth = canvas.width;
+                const canvasHeight = canvas.height;
+                if (this.x < 10) this.x = 10;
+                if (this.x > canvasWidth - 10) this.x = canvasWidth - 10;
+                if (this.y < 10) this.y = 10;
+                if (this.y > canvasHeight - 10) this.y = canvasHeight - 10;
+
+                this.gridX = Math.floor(this.x / 20);
+                this.gridY = Math.floor(this.y / 20);
             }
 
-            draw(selected) {
-                // Draw body (circle)
+            draw(ctx, selected) {
+                // Body
                 ctx.fillStyle = selected ? '#FFD700' : '#FFD93D';
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Draw eyes
+                // Eyes
                 ctx.fillStyle = '#000';
                 ctx.beginPath();
                 ctx.arc(this.x - 5, this.y - 3, 2, 0, Math.PI * 2);
@@ -625,172 +776,243 @@
                 ctx.arc(this.x + 5, this.y - 3, 2, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Draw mouth
+                // Mouth
                 ctx.strokeStyle = '#000';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y + 3, 3, 0, Math.PI);
                 ctx.stroke();
 
-                // Draw arms
+                // Arms
                 ctx.strokeStyle = '#FFD93D';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.moveTo(this.x - 12, this.y);
-                ctx.lineTo(this.x - 20, this.y - 5);
+                ctx.lineTo(this.x - 20, this.y - 5 + Math.sin(this.age) * 3);
                 ctx.stroke();
                 ctx.beginPath();
                 ctx.moveTo(this.x + 12, this.y);
-                ctx.lineTo(this.x + 20, this.y - 5);
+                ctx.lineTo(this.x + 20, this.y - 5 + Math.sin(this.age + 0.5) * 3);
                 ctx.stroke();
 
-                // Draw legs
+                // Legs
                 ctx.beginPath();
                 ctx.moveTo(this.x - 6, this.y + 12);
-                ctx.lineTo(this.x - 6, this.y + 20);
+                ctx.lineTo(this.x - 6, this.y + 20 + Math.sin(this.age) * 2);
                 ctx.stroke();
                 ctx.beginPath();
                 ctx.moveTo(this.x + 6, this.y + 12);
-                ctx.lineTo(this.x + 6, this.y + 20);
+                ctx.lineTo(this.x + 6, this.y + 20 + Math.sin(this.age + 0.5) * 2);
                 ctx.stroke();
 
-                // Draw selection circle
+                // Selection circle
                 if (selected) {
                     ctx.strokeStyle = '#FFD700';
                     ctx.lineWidth = 2;
                     ctx.beginPath();
-                    ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
+                    ctx.arc(this.x, this.y, 22, 0, Math.PI * 2);
                     ctx.stroke();
                 }
 
-                // Draw health bar
+                // Health bar
                 const barWidth = 25;
                 const barHeight = 3;
+                const healthPercent = 100 - (this.hunger / 100) * 50 - (this.energy / 100) * 50;
                 ctx.fillStyle = '#333';
-                ctx.fillRect(this.x - barWidth / 2, this.y - 20, barWidth, barHeight);
-                ctx.fillStyle = this.health > 50 ? '#00FF00' : this.health > 25 ? '#FFAA00' : '#FF0000';
-                ctx.fillRect(this.x - barWidth / 2, this.y - 20, (barWidth * this.health) / 100, barHeight);
+                ctx.fillRect(this.x - barWidth / 2, this.y - 22, barWidth, barHeight);
+                ctx.fillStyle = healthPercent > 75 ? '#00FF00' : healthPercent > 50 ? '#FFAA00' : '#FF0000';
+                ctx.fillRect(this.x - barWidth / 2, this.y - 22, (barWidth * healthPercent) / 100, barHeight);
 
-                // Draw chat bubble
-                if (this.chatBubble && this.chatBubbleTimer > 0) {
-                    ctx.fillStyle = 'white';
-                    ctx.strokeStyle = '#000';
-                    ctx.lineWidth = 1;
-                    const bubbleX = this.x + 25;
-                    const bubbleY = this.y - 30;
-                    const bubbleWidth = 60;
-                    const bubbleHeight = 25;
-                    const radius = 5;
-
-                    ctx.beginPath();
-                    ctx.moveTo(bubbleX + radius, bubbleY);
-                    ctx.lineTo(bubbleX + bubbleWidth - radius, bubbleY);
-                    ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY, bubbleX + bubbleWidth, bubbleY + radius);
-                    ctx.lineTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight - radius);
-                    ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight, bubbleX + bubbleWidth - radius, bubbleY + bubbleHeight);
-                    ctx.lineTo(bubbleX + 15, bubbleY + bubbleHeight);
-                    ctx.lineTo(bubbleX + 10, bubbleY + bubbleHeight + 10);
-                    ctx.lineTo(bubbleX + radius, bubbleY + bubbleHeight);
-                    ctx.quadraticCurveTo(bubbleX, bubbleY + bubbleHeight, bubbleX, bubbleY + bubbleHeight - radius);
-                    ctx.lineTo(bubbleX, bubbleY + radius);
-                    ctx.quadraticCurveTo(bubbleX, bubbleY, bubbleX + radius, bubbleY);
-                    ctx.fill();
-                    ctx.stroke();
-
-                    ctx.fillStyle = '#000';
+                // Task indicator
+                if (this.currentTask === 'sleeping') {
+                    ctx.fillStyle = '#5555FF';
+                    ctx.fillText('Z', this.x + 15, this.y - 15);
+                } else if (this.currentTask === 'eating') {
+                    ctx.fillStyle = '#FF5555';
                     ctx.font = '10px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(this.chatBubble, bubbleX + bubbleWidth / 2, bubbleY + bubbleHeight / 2);
+                    ctx.fillText('🍖', this.x + 15, this.y - 15);
                 }
-            }
-
-            showChatBubble(text) {
-                this.chatBubble = text;
-                this.chatBubbleTimer = 60;
             }
         }
 
+        // ============================================
+        // BUILDING ENTITY
+        // ============================================
+
         class Building {
-            constructor(x, y, type) {
+            constructor(x, y, type, id) {
+                this.id = id;
                 this.x = x;
                 this.y = y;
                 this.type = type;
                 this.width = type === 'house' ? 40 : 30;
                 this.height = type === 'house' ? 50 : 30;
                 this.health = 100;
-                this.onFire = false;
+                this.constructionProgress = 0;
+                this.isBuilt = false;
             }
 
-            update() {
-                if (this.onFire) {
-                    this.health -= 0.5;
-                    if (this.health <= 0) {
-                        this.onFire = false;
+            update(engine) {
+                if (!this.isBuilt) {
+                    // Check if minions can construct
+                    for (let minion of engine.minions) {
+                        if (minion.energy > 40 && minion.hunger < 60) {
+                            const dx = this.x - minion.x;
+                            const dy = this.y - minion.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist < 100) {
+                                minion.currentTask = 'building';
+                                this.constructionProgress += 0.5;
+                                if (this.constructionProgress >= 100) {
+                                    this.isBuilt = true;
+                                    engine.addLog(`🏠 House completed at (${this.x}, ${this.y})`, 'success');
+                                }
+                                break;
+                            }
+                        }
                     }
                 }
             }
 
-            draw() {
-                ctx.fillStyle = this.onFire ? '#FF4444' : (this.type === 'house' ? '#8B4513' : '#90EE90');
+            draw(ctx) {
+                const opacity = this.isBuilt ? 1 : 0.5;
+                ctx.globalAlpha = opacity;
+
+                ctx.fillStyle = '#8B4513';
                 ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
 
                 // Roof
-                if (this.type === 'house') {
-                    ctx.fillStyle = '#DC143C';
-                    ctx.beginPath();
-                    ctx.moveTo(this.x - this.width / 2, this.y - this.height / 2);
-                    ctx.lineTo(this.x, this.y - this.height / 2 - 15);
-                    ctx.lineTo(this.x + this.width / 2, this.y - this.height / 2);
-                    ctx.fill();
-                }
+                ctx.fillStyle = '#DC143C';
+                ctx.beginPath();
+                ctx.moveTo(this.x - this.width / 2, this.y - this.height / 2);
+                ctx.lineTo(this.x, this.y - this.height / 2 - 15);
+                ctx.lineTo(this.x + this.width / 2, this.y - this.height / 2);
+                ctx.fill();
 
                 // Door
-                if (this.type === 'house') {
-                    ctx.fillStyle = '#654321';
-                    ctx.fillRect(this.x - 8, this.y, 16, 20);
+                ctx.fillStyle = '#654321';
+                ctx.fillRect(this.x - 8, this.y, 16, 20);
+
+                // Construction progress bar
+                if (!this.isBuilt) {
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(this.x - 20, this.y - this.height / 2 - 25, 40, 5);
+                    ctx.fillStyle = '#FFD700';
+                    ctx.fillRect(this.x - 20, this.y - this.height / 2 - 25, (40 * this.constructionProgress) / 100, 5);
                 }
+
+                ctx.globalAlpha = 1;
             }
         }
 
-        class Crop {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.growth = 0;
+        // ============================================
+        // RENDERER
+        // ============================================
+
+        class Renderer {
+            constructor(canvasElement) {
+                this.canvas = canvasElement;
+                this.ctx = this.canvas.getContext('2d');
+                this.canvas.width = window.innerWidth - 420;
+                this.canvas.height = window.innerHeight - 60;
             }
 
-            draw() {
-                const scale = this.growth / 100;
-                ctx.fillStyle = '#228B22';
-                ctx.beginPath();
-                ctx.ellipse(this.x, this.y, 8 * scale, 12 * scale, 0, 0, Math.PI * 2);
-                ctx.fill();
+            render(game) {
+                // Clear canvas
+                this.ctx.fillStyle = 'rgba(135, 206, 235, 1)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw grid (optional)
+                this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
+                this.ctx.lineWidth = 1;
+                for (let x = 0; x < this.canvas.width; x += 20) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, this.canvas.height);
+                    this.ctx.stroke();
+                }
+                for (let y = 0; y < this.canvas.height; y += 20) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(this.canvas.width, y);
+                    this.ctx.stroke();
+                }
+
+                // Draw buildings
+                game.buildings.forEach(building => building.draw(this.ctx));
+
+                // Draw minions
+                game.minions.forEach(minion => {
+                    const isSelected = minion.id === game.selectedMinionId;
+                    minion.draw(this.ctx, isSelected);
+                });
+
+                // Draw debug info
+                this.ctx.fillStyle = '#000';
+                this.ctx.font = '12px monospace';
+                this.ctx.fillText(`Paused: ${game.isPaused}`, 10, 20);
             }
         }
 
-        // ===== MAIN GAME LOOP =====
-        const game = new Game();
+        // ============================================
+        // MAIN GAME LOOP
+        // ============================================
 
+        const canvas = document.getElementById('canvas');
+        const game = new GameEngine();
+        const renderer = new Renderer(canvas);
+
+        // Spawn initial minions
+        for (let i = 0; i < 5; i++) {
+            const minion = new Minion(
+                Math.random() * (canvas.width - 100) + 50,
+                Math.random() * (canvas.height - 100) + 50,
+                game.minionIdCounter++
+            );
+            game.minions.push(minion);
+        }
+
+        // Add initial resources for testing
+        game.resources.food = 300;
+        game.resources.wood = 150;
+        game.resources.stone = 100;
+
+        // Game loop
         function gameLoop() {
-            game.update();
-            game.draw();
+            for (let i = 0; i < game.gameSpeed; i++) {
+                game.tick();
+            }
+            renderer.render(game);
             requestAnimationFrame(gameLoop);
         }
 
+        gameLoop();
+
+        // Canvas click handler
         canvas.addEventListener('click', (e) => {
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-            game.handleCanvasClick(x, y);
+
+            for (let minion of game.minions) {
+                const dx = minion.x - x;
+                const dy = minion.y - y;
+                if (Math.sqrt(dx * dx + dy * dy) < 25) {
+                    game.selectedMinionId = minion.id;
+                    game.addLog(`👤 Selected: ${minion.name}`, 'info');
+                    return;
+                }
+            }
+
+            game.selectedMinionId = null;
         });
 
+        // Window resize handler
         window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth - 330;
-            canvas.height = window.innerHeight - 80;
+            renderer.canvas.width = window.innerWidth - 420;
+            renderer.canvas.height = window.innerHeight - 60;
         });
-
-        gameLoop();
     </script>
 </body>
 </html>
